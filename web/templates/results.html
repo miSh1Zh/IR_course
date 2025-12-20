@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ query }} — Медицинский поиск</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .logo {
+            color: white;
+            font-size: 1.5rem;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+        
+        .search-form {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 0.8rem 1.2rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 25px;
+            outline: none;
+        }
+        
+        .search-btn {
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .search-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .main {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .results-info {
+            color: #666;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        
+        .results-info strong {
+            color: #333;
+        }
+        
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c00;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .result-item {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: box-shadow 0.2s;
+        }
+        
+        .result-item:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .result-title {
+            font-size: 1.2rem;
+            color: #1a0dab;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        
+        .result-title:hover {
+            text-decoration: underline;
+        }
+        
+        .result-url {
+            color: #006621;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            word-break: break-all;
+        }
+        
+        .result-category {
+            display: inline-block;
+            background: #e9ecef;
+            color: #495057;
+            padding: 0.2rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .no-results h2 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+        
+        .pagination a {
+            padding: 0.5rem 1rem;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .pagination a:hover {
+            background: #667eea;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <a href="/" class="logo">Медицинский поиск</a>
+            <form class="search-form" action="/search" method="GET">
+                <input type="text" name="q" class="search-input" 
+                       value="{{ query }}" autocomplete="off">
+                <button type="submit" class="search-btn">Поиск</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="main">
+        {% if results.get('error') %}
+        <div class="error">
+            Ошибка: {{ results.error }}
+        </div>
+        {% endif %}
+        
+        <div class="results-info">
+            Найдено <strong>{{ results.total }}</strong> документов по запросу 
+            «<strong>{{ query }}</strong>»
+        </div>
+        
+        {% if results.documents %}
+            {% for doc in results.documents %}
+            <div class="result-item">
+                <a href="{{ doc.url or '#' }}" class="result-title" target="_blank">
+                    {{ doc.title or 'Без названия' }}
+                </a>
+                {% if doc.url %}
+                <div class="result-url">{{ doc.url }}</div>
+                {% endif %}
+                {% if doc.category %}
+                <span class="result-category">{{ doc.category }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+            
+            {% if results.total > limit %}
+            <div class="pagination">
+                {% if page > 1 %}
+                <a href="/search?q={{ query }}&page={{ page - 1 }}">← Назад</a>
+                {% endif %}
+                <a href="/search?q={{ query }}&page={{ page + 1 }}">Далее →</a>
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="no-results">
+                <h2>Ничего не найдено</h2>
+                <p>Попробуйте изменить запрос или использовать другие ключевые слова.</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
+

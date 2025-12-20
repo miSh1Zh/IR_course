@@ -1,0 +1,14 @@
+__pycache__
+*.pyc
+*.pyo
+*.log
+*.aux
+*.pdf
+venv/
+.DS_Store
+.cursor/
+
+ir_labs.md
+
+data/*.json
+data/*.bin

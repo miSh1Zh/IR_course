@@ -1,0 +1,151 @@
+\section{Тестирование системы}
+
+Для обеспечения качества и корректности работы системы разработан комплекс тестов, покрывающий все основные компоненты.
+
+\subsection{Тестирование краулера}
+
+\subsubsection{Тест 1: Корректность извлечения данных}
+\textbf{Цель:} Проверить, что spider корректно извлекает все поля статьи.
+
+\textbf{Шаги:}
+\begin{enumerate}
+    \item Запустить spider на ограниченном количестве статей (10 штук)
+    \item Проверить наличие всех полей: title, text, url, category, year
+    \item Проверить длину текста (должна быть > 100 символов)
+\end{enumerate}
+
+\textbf{Ожидаемый результат:} Все поля заполнены, текст не пустой.
+
+\subsubsection{Тест 2: Обработка дубликатов}
+\textbf{Цель:} Проверить, что дубликаты не добавляются в базу.
+
+\textbf{Шаги:}
+\begin{enumerate}
+    \item Записать количество документов в базе
+    \item Запустить spider повторно на тех же страницах
+    \item Проверить количество документов
+\end{enumerate}
+
+\textbf{Ожидаемый результат:} Количество документов не изменилось.
+
+\subsubsection{Тест 3: Работа с Unicode}
+\textbf{Цель:} Проверить корректную обработку кириллицы.
+
+\textbf{Шаги:}
+\begin{enumerate}
+    \item Собрать статьи на русском языке
+    \item Проверить корректность заголовков и текста
+    \item Проверить экспорт в JSON
+\end{enumerate}
+
+\textbf{Ожидаемый результат:} Кириллица отображается корректно.
+
+\subsection{Unit-тесты поискового движка}
+
+Реализованы unit-тесты для всех компонентов системы:
+
+\subsubsection{Тесты токенизатора}
+\begin{itemize}
+    \item \texttt{test\_tokenizer\_simple} --- базовая токенизация
+    \item \texttt{test\_tokenizer\_punctuation} --- обработка знаков препинания
+    \item \texttt{test\_tokenizer\_russian} --- кириллица
+    \item \texttt{test\_tokenizer\_mixed} --- смешанный текст
+    \item \texttt{test\_tokenizer\_empty} --- пустой ввод
+\end{itemize}
+
+\subsubsection{Тесты стемминга}
+\begin{itemize}
+    \item \texttt{test\_stemmer\_english} --- английские слова
+    \item \texttt{test\_stemmer\_russian} --- русские слова
+    \item \texttt{test\_stemmer\_short} --- короткие слова
+\end{itemize}
+
+\subsubsection{Тесты HashMap}
+\begin{itemize}
+    \item \texttt{test\_hashmap\_insert\_find} --- вставка и поиск
+    \item \texttt{test\_hashmap\_update} --- обновление значения
+    \item \texttt{test\_hashmap\_operator} --- оператор []
+    \item \texttt{test\_hashmap\_many} --- 10,000 элементов (проверка rehash)
+\end{itemize}
+
+\subsubsection{Тесты булевых операций}
+\begin{itemize}
+    \item \texttt{test\_intersect} --- пересечение
+    \item \texttt{test\_intersect\_empty} --- пустой результат
+    \item \texttt{test\_union} --- объединение
+    \item \texttt{test\_union\_empty} --- объединение с пустым списком
+\end{itemize}
+
+\subsubsection{Тесты парсера запросов}
+\begin{itemize}
+    \item \texttt{test\_query\_parser\_simple} --- одно слово
+    \item \texttt{test\_query\_parser\_and} --- явное AND
+    \item \texttt{test\_query\_parser\_or} --- OR
+    \item \texttt{test\_query\_parser\_not} --- NOT
+    \item \texttt{test\_query\_parser\_complex} --- сложный запрос со скобками
+    \item \texttt{test\_query\_parser\_implicit\_and} --- неявное AND (пробел)
+\end{itemize}
+
+\subsection{Интеграционные тесты}
+
+Скрипт \texttt{integration\_test.sh} проверяет работу системы в целом:
+\begin{enumerate}
+    \item Создание тестового корпуса (5 документов)
+    \item Построение индекса
+    \item Поиск по одному слову
+    \item Поиск с AND
+    \item Поиск с OR
+    \item Поиск с NOT
+    \item Проверка пустого результата
+\end{enumerate}
+
+\subsection{Результаты тестирования}
+
+Все unit-тесты (22 теста) и интеграционные тесты проходят успешно:
+
+\begin{verbatim}
+$ make test
+./test_runner
+========================================
+      UNIT ТЕСТЫ
+========================================
+
+--- Тесты токенизатора ---
+test_tokenizer_simple
+test_tokenizer_punctuation
+test_tokenizer_russian
+test_tokenizer_mixed
+test_tokenizer_empty
+
+--- Тесты стемминга ---
+test_stemmer_english
+test_stemmer_russian
+test_stemmer_short
+
+--- Тесты HashMap ---
+test_hashmap_insert_find
+test_hashmap_update
+test_hashmap_operator
+test_hashmap_many
+
+--- Тесты булевых операций ---
+test_intersect
+test_intersect_empty
+test_union
+test_union_empty
+
+--- Тесты парсера запросов ---
+test_query_parser_simple
+test_query_parser_and
+test_query_parser_or
+test_query_parser_not
+test_query_parser_complex
+test_query_parser_implicit_and
+
+========================================
+      ВСЕ ТЕСТЫ ПРОЙДЕНЫ!
+========================================
+\end{verbatim}
+
+\pagebreak
+

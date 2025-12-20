@@ -1,0 +1,104 @@
+\section{Реализация}
+
+\subsection{Структура проекта}
+
+\begin{verbatim}
+ir/
+├── crawler/              # Scrapy краулер
+│   └── medical_crawler/
+│       └── spiders/
+├── engine/               # C++ поисковый движок
+│   ├── src/
+│   │   ├── tokenizer.cpp/hpp
+│   │   ├── stemmer.cpp/hpp
+│   │   ├── hashmap.hpp
+│   │   ├── indexer.cpp/hpp
+│   │   ├── searcher.cpp/hpp
+│   │   ├── query_parser.cpp/hpp
+│   │   ├── main_indexer.cpp
+│   │   └── main_searcher.cpp
+│   └── tests/
+├── web/                  # Flask веб-интерфейс
+└── analysis/             # Скрипты анализа
+\end{verbatim}
+
+\subsection{Токенизатор}
+
+Класс \texttt{Tokenizer} реализует разбиение текста на токены с поддержкой UTF-8:
+
+\begin{lstlisting}[style=customc]
+class Tokenizer {
+public:
+    std::vector<std::string> tokenize(const std::string& text);
+private:
+    bool is_alpha_utf8(const std::string& str, size_t& pos, 
+                       std::string& char_out);
+    std::string to_lowercase_utf8(const std::string& ch);
+};
+\end{lstlisting}
+
+\subsection{Хеш-таблица}
+
+Реализация на основе метода цепочек:
+
+\begin{lstlisting}[style=customc]
+template<typename V>
+class HashMap {
+    struct Node {
+        std::string key;
+        V value;
+        Node* next;
+    };
+    std::vector<Node*> buckets;
+    
+    size_t hash(const std::string& key) const {
+        size_t h = 5381;
+        for (char c : key)
+            h = ((h << 5) + h) + c;
+        return h % buckets.size();
+    }
+};
+\end{lstlisting}
+
+\subsection{Парсер запросов}
+
+Рекурсивный спуск для разбора булевых выражений:
+
+\begin{verbatim}
+Грамматика:
+  query   -> or_expr
+  or_expr -> and_expr (|| and_expr)*
+  and_expr-> not_expr ((&& | space) not_expr)*
+  not_expr-> !? primary
+  primary -> term | (query)
+\end{verbatim}
+
+\subsection{Бинарный формат индекса}
+
+\begin{verbatim}
+Header (32 bytes):
+  - magic: 4 bytes ("MIDX")
+  - version: 4 bytes
+  - num_terms: 4 bytes
+  - num_docs: 4 bytes
+  - forward_offset: 8 bytes
+  - reserved: 8 bytes
+
+Inverted index:
+  For each term:
+    - term_len: 4 bytes
+    - term: term_len bytes (UTF-8)
+    - posting_len: 4 bytes
+    - postings: posting_len * 4 bytes (uint32[])
+
+Forward index (at forward_offset):
+  For each document:
+    - doc_id: 4 bytes
+    - title_len, title: ...
+    - url_len, url: ...
+    - category_len, category: ...
+    - source_len, source: ...
+\end{verbatim}
+
+\pagebreak
+

@@ -1,0 +1,136 @@
+\section{Результаты}
+
+\subsection{Статистика корпуса}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|}
+\hline
+\textbf{Параметр} & \textbf{Значение} \\
+\hline
+Всего документов & -- \\
+Размер БД MongoDB & -- МБ \\
+Средняя длина текста & -- символов \\
+Средняя длина заголовка & -- символов \\
+Количество категорий & -- \\
+Временной диапазон & 2007--2025 \\
+\hline
+\end{tabular}
+\caption{Статистика собранного корпуса}
+\end{table}
+
+\subsection{Распределение по источникам}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Источник} & \textbf{Документов} & \textbf{Доля, \%} \\
+\hline
+journaldoctor.ru & -- & -- \\
+Источник 2 & -- & -- \\
+Источник 3 & -- & -- \\
+\hline
+\textbf{Итого} & -- & 100.0 \\
+\hline
+\end{tabular}
+\caption{Распределение документов по источникам}
+\end{table}
+
+\subsection{Характеристики индекса}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|}
+\hline
+\textbf{Параметр} & \textbf{Значение} \\
+\hline
+Количество документов & -- \\
+Количество уникальных термов & -- \\
+Размер индекса (бинарный файл) & -- МБ \\
+Время индексации & -- сек \\
+Скорость индексации & -- док/сек \\
+\hline
+\end{tabular}
+\caption{Характеристики индекса}
+\end{table}
+
+\subsection{Анализ закона Ципфа}
+
+\begin{figure}[h]
+\centering
+% \includegraphics[width=0.8\textwidth]{zipf_law.png}
+\caption{Закон Ципфа: log(rank) vs log(frequency)}
+\end{figure}
+
+Параметры:
+\begin{itemize}
+    \item Коэффициент $\alpha$ = -- (теоретическое значение $\approx 1$)
+    \item Hapax legomena (слова с частотой 1): --\%
+\end{itemize}
+
+\subsection{Производительность поиска}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Запрос} & \textbf{Результатов} & \textbf{Время, мкс} \\
+\hline
+кардиология & -- & -- \\
+диабет \&\& лечение & -- & -- \\
+неврология || психиатрия & -- & -- \\
+!хирургия \&\& терапия & -- & -- \\
+(сердце || сосуды) \&\& лечение & -- & -- \\
+\hline
+\end{tabular}
+\caption{Производительность поиска}
+\end{table}
+
+\subsection{Примеры работы системы}
+
+\begin{verbatim}
+$ ./searcher --index=data/index.bin --query="кардиология"
+Запрос: кардиология
+----------------------------------------
+Найдено: 1234 документов
+1. Современные подходы в кардиологии
+   http://example.com/article/1
+   [Кардиология]
+
+2. Кардиометаболический синдром
+   http://example.com/article/2
+   [Кардиология]
+...
+Время поиска: 450 мкс
+\end{verbatim}
+
+\subsection{Сравнение с существующими поисковиками}
+
+Для оценки качества были использованы следующие существующие поисковики:
+\begin{enumerate}
+    \item Встроенный поиск journaldoctor.ru
+    \item Google с ограничением по сайту: \texttt{site:journaldoctor.ru [запрос]}
+    \item Яндекс с ограничением по сайту
+\end{enumerate}
+
+\subsubsection{Примеры запросов}
+
+\textbf{Запрос 1:} <<кардиометаболический синдром>>
+
+\begin{itemize}
+    \item journaldoctor.ru: найдено X результатов
+    \item Google: найдено Y результатов
+    \item Недостатки: TODO
+\end{itemize}
+
+\textbf{Запрос 2:} <<постковидный синдром>>
+
+\begin{itemize}
+    \item journaldoctor.ru: найдено X результатов
+    \item Google: найдено Y результатов
+    \item Недостатки: TODO
+\end{itemize}
+
+\pagebreak
+

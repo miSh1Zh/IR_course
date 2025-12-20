@@ -1,0 +1,59 @@
+services:
+  mongodb:
+    image: mongo:6
+    container_name: ir_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=medical_search
+    restart: unless-stopped
+    networks:
+      - ir_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/medical_search --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  crawler:
+    build: ./crawler
+    container_name: ir_crawler
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/medical_search
+    volumes:
+      - ./crawler/logs:/app/logs
+      - ./crawler/medical_crawler:/app/medical_crawler:ro
+    networks:
+      - ir_network
+    restart: "always"
+
+  web:
+    build: ./web
+    container_name: ir_web
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./data:/app/data:ro
+      - ./engine:/app/engine:ro
+    depends_on:
+      - mongodb
+    environment:
+      - FLASK_ENV=production
+      - MONGO_URI=mongodb://mongodb:27017/medical_search
+    networks:
+      - ir_network
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+    driver: local
+
+networks:
+  ir_network:
+    driver: bridge
+
