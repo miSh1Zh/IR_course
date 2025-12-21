@@ -21,7 +21,7 @@ class RMJSpider(scrapy.Spider):
     custom_settings = {
         'CLOSESPIDER_ITEMCOUNT': 50000,
         'DEPTH_LIMIT': 7,
-        'DOWNLOAD_DELAY': 3,
+        'DOWNLOAD_DELAY': 4,
         'RANDOMIZE_DOWNLOAD_DELAY': True,
         'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'COOKIES_ENABLED': True,
@@ -29,6 +29,7 @@ class RMJSpider(scrapy.Spider):
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
         },
+        'JOBDIR': '/app/logs/rmj_state',
     }
     
     def start_requests(self):

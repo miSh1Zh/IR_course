@@ -2,19 +2,19 @@
 set -e
 
 # Конфигурация
-JOURNALDOCTOR_TIME=10  # минут для journaldoctor
-BNEWS_TIME=8           # минут для bnews
-RMJ_TIME=12            # минут для rmj
-PAUSE_BETWEEN=2        # минут пауза между сменой источника
-LONG_PAUSE=30          # минут пауза при блокировке всех источников
-MIN_ITEMS=5            # минимум документов за сессию для считания источника активным
+JOURNALDOCTOR_TIME=15  # минут для journaldoctor
+BNEWS_TIME=10          # минут для bnews
+RMJ_TIME=20            # минут для rmj (самый большой)
+PAUSE_BETWEEN=5        # минут пауза между сменой источника (увеличена)
+LONG_PAUSE=60          # минут пауза при блокировке всех источников
+MIN_ITEMS=3            # минимум документов за сессию (уменьшен с 5 до 3)
 
 # MongoDB connection (внутри Docker сети)
 MONGO_HOST="${MONGO_HOST:-mongodb}"
 MONGO_PORT="${MONGO_PORT:-27017}"
 MONGO_DB="${MONGO_DB:-medical_search}"
 
-echo "Стратегия: по очереди с ограничением времени"
+echo "Стратегия:"
 echo "journaldoctor: ${JOURNALDOCTOR_TIME} мин"
 echo "bnews: ${BNEWS_TIME} мин"
 echo "rmj: ${RMJ_TIME} мин"
