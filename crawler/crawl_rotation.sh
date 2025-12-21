@@ -5,6 +5,10 @@ set -e
 JOURNALDOCTOR_TIME=15  # минут для journaldoctor
 BNEWS_TIME=10          # минут для bnews
 RMJ_TIME=20            # минут для rmj (самый большой)
+TAKZDOROVO_TIME=12     # минут для takzdorovo
+PROBOLEZNY_TIME=15     # минут для probolezny
+CLINICKRASNODAR_TIME=8 # минут для clinickrasnodar
+BIGENC_TIME=15         # минут для bigenc
 PAUSE_BETWEEN=5        # минут пауза между сменой источника (увеличена)
 LONG_PAUSE=60          # минут пауза при блокировке всех источников
 MIN_ITEMS=3            # минимум документов за сессию (уменьшен с 5 до 3)
@@ -45,7 +49,28 @@ while true; do
     
     blocked_count=0
     
-    # 1. journaldoctor
+    # 1. probolezny
+    echo ""
+    echo "[$(date +%H:%M:%S)] === probolezny (${PROBOLEZNY_TIME} мин) ==="
+    items_before=$(count_docs "probolezny")
+    echo "[$(date +%H:%M:%S)] Документов до: ${items_before}"
+    
+    timeout ${PROBOLEZNY_TIME}m scrapy crawl probolezny -L INFO 2>&1 | tee -a /app/logs/rotation.log || true
+    
+    items_after=$(count_docs "probolezny")
+    items_collected=$((items_after - items_before))
+    
+    echo "[$(date +%H:%M:%S)] Документов после: ${items_after}"
+    echo "[$(date +%H:%M:%S)] Собрано: ${items_collected}"
+    if [ "$items_collected" -lt "$MIN_ITEMS" ]; then
+        echo "[$(date +%H:%M:%S)] probolezny может быть заблокирован (< ${MIN_ITEMS})"
+        blocked_count=$((blocked_count + 1))
+    fi
+    
+    echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
+    sleep ${PAUSE_BETWEEN}m
+
+    # 2. journaldoctor
     echo ""
     echo "[$(date +%H:%M:%S)] === journaldoctor (${JOURNALDOCTOR_TIME} мин) ==="
     items_before=$(count_docs "journaldoctor")
@@ -66,7 +91,7 @@ while true; do
     echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
     sleep ${PAUSE_BETWEEN}m
     
-    # 2. bnews
+    # 3. bnews
     echo ""
     echo "[$(date +%H:%M:%S)] === bnews (${BNEWS_TIME} мин) ==="
     items_before=$(count_docs "bnews")
@@ -87,7 +112,7 @@ while true; do
     echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
     sleep ${PAUSE_BETWEEN}m
     
-    # 3. rmj
+    # 4. rmj
     echo ""
     echo "[$(date +%H:%M:%S)] === rmj (${RMJ_TIME} мин) ==="
     items_before=$(count_docs "rmj")
@@ -105,8 +130,72 @@ while true; do
         blocked_count=$((blocked_count + 1))
     fi
     
+    echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
+    sleep ${PAUSE_BETWEEN}m
+    
+    # 5. takzdorovo
+    echo ""
+    echo "[$(date +%H:%M:%S)] === takzdorovo (${TAKZDOROVO_TIME} мин) ==="
+    items_before=$(count_docs "takzdorovo")
+    echo "[$(date +%H:%M:%S)] Документов до: ${items_before}"
+    
+    timeout ${TAKZDOROVO_TIME}m scrapy crawl takzdorovo -L INFO 2>&1 | tee -a /app/logs/rotation.log || true
+    
+    items_after=$(count_docs "takzdorovo")
+    items_collected=$((items_after - items_before))
+    
+    echo "[$(date +%H:%M:%S)] Документов после: ${items_after}"
+    echo "[$(date +%H:%M:%S)] Собрано: ${items_collected}"
+    if [ "$items_collected" -lt "$MIN_ITEMS" ]; then
+        echo "[$(date +%H:%M:%S)] takzdorovo может быть заблокирован (< ${MIN_ITEMS})"
+        blocked_count=$((blocked_count + 1))
+    fi
+    
+    echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
+    sleep ${PAUSE_BETWEEN}m
+    
+    
+    # 6. clinickrasnodar
+    echo ""
+    echo "[$(date +%H:%M:%S)] === clinickrasnodar (${CLINICKRASNODAR_TIME} мин) ==="
+    items_before=$(count_docs "clinickrasnodar")
+    echo "[$(date +%H:%M:%S)] Документов до: ${items_before}"
+    
+    timeout ${CLINICKRASNODAR_TIME}m scrapy crawl clinickrasnodar -L INFO 2>&1 | tee -a /app/logs/rotation.log || true
+    
+    items_after=$(count_docs "clinickrasnodar")
+    items_collected=$((items_after - items_before))
+    
+    echo "[$(date +%H:%M:%S)] Документов после: ${items_after}"
+    echo "[$(date +%H:%M:%S)] Собрано: ${items_collected}"
+    if [ "$items_collected" -lt "$MIN_ITEMS" ]; then
+        echo "[$(date +%H:%M:%S)] clinickrasnodar может быть заблокирован (< ${MIN_ITEMS})"
+        blocked_count=$((blocked_count + 1))
+    fi
+    
+    echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
+    sleep ${PAUSE_BETWEEN}m
+    
+    # 7. bigenc
+    echo ""
+    echo "[$(date +%H:%M:%S)] === bigenc (${BIGENC_TIME} мин) ==="
+    items_before=$(count_docs "bigenc")
+    echo "[$(date +%H:%M:%S)] Документов до: ${items_before}"
+    
+    timeout ${BIGENC_TIME}m scrapy crawl bigenc -L INFO 2>&1 | tee -a /app/logs/rotation.log || true
+    
+    items_after=$(count_docs "bigenc")
+    items_collected=$((items_after - items_before))
+    
+    echo "[$(date +%H:%M:%S)] Документов после: ${items_after}"
+    echo "[$(date +%H:%M:%S)] Собрано: ${items_collected}"
+    if [ "$items_collected" -lt "$MIN_ITEMS" ]; then
+        echo "[$(date +%H:%M:%S)] bigenc может быть заблокирован (< ${MIN_ITEMS})"
+        blocked_count=$((blocked_count + 1))
+    fi
+    
     # Проверка: если все источники заблокированы
-    if [ "$blocked_count" -eq 3 ]; then
+    if [ "$blocked_count" -eq 7 ]; then
         echo ""
         echo "[$(date +%H:%M:%S)] ВСЕ ИСТОЧНИКИ ЗАБЛОКИРОВАНЫ ИЛИ НЕДОСТУПНЫ"
         echo "[$(date +%H:%M:%S)] Увеличенная пауза: ${LONG_PAUSE} мин..."
