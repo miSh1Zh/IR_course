@@ -23,7 +23,7 @@ class ClinicKrasnodarSpider(scrapy.Spider):
         'DOWNLOAD_DELAY': 4,
         'RANDOMIZE_DOWNLOAD_DELAY': True,
         'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'JOBDIR': '/app/logs/clinickrasnodar_state',
+        'JOBDIR': 'logs/clinickrasnodar_state',
     }
     
     def parse(self, response):

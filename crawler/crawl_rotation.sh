@@ -3,13 +3,13 @@ set -e
 
 # Конфигурация
 JOURNALDOCTOR_TIME=15  # минут для journaldoctor
-BNEWS_TIME=10          # минут для bnews
-RMJ_TIME=20            # минут для rmj (самый большой)
-TAKZDOROVO_TIME=12     # минут для takzdorovo
+BNEWS_TIME=5          # минут для bnews
+RMJ_TIME=15            # минут для rmj
+TAKZDOROVO_TIME=15     # минут для takzdorovo
 PROBOLEZNY_TIME=15     # минут для probolezny
 CLINICKRASNODAR_TIME=8 # минут для clinickrasnodar
 BIGENC_TIME=15         # минут для bigenc
-PAUSE_BETWEEN=5        # минут пауза между сменой источника (увеличена)
+PAUSE_BETWEEN=2        # минут пауза между сменой источника
 LONG_PAUSE=60          # минут пауза при блокировке всех источников
 MIN_ITEMS=3            # минимум документов за сессию (уменьшен с 5 до 3)
 
