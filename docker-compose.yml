@@ -33,18 +33,21 @@ services:
     restart: "always"
 
   web:
-    build: ./web
+    build:
+      context: .
+      dockerfile: ./web/Dockerfile
     container_name: ir_web
     ports:
       - "5001:5000"
     volumes:
       - ./data:/app/data:ro
-      - ./engine:/app/engine:ro
     depends_on:
       - mongodb
     environment:
       - FLASK_ENV=production
       - MONGO_URI=mongodb://mongodb:27017/medical_search
+      - SEARCHER_PATH=/app/engine/searcher
+      - INDEX_PATH=/app/data/index.bin
     networks:
       - ir_network
     restart: unless-stopped
