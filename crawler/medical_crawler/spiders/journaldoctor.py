@@ -5,88 +5,81 @@ import re
 
 
 class JournalDoctorSpider(scrapy.Spider):
-    """Spider для сбора статей с journaldoctor.ru"""
+    """Spider для сбора статей с journaldoctor.ru
+    
+    Рекурсивный обход всех страниц сайта с глубиной 7.
+    """
     
     name = 'journaldoctor'
     allowed_domains = ['journaldoctor.ru']
     
-    # Начать с каталога статей
-    start_urls = ['https://journaldoctor.ru/catalog']
+    start_urls = ['https://journaldoctor.ru/']
     
-    # Ограничения для теста
     custom_settings = {
         'CLOSESPIDER_ITEMCOUNT': 50000,
-        'DEPTH_LIMIT': 6,                # Не уходить глубже 6 уровней
-        'ROBOTSTXT_OBEY': False,         # Для учебных целей (robots.txt блокирует архивы)
-        'DOWNLOAD_DELAY': 3,
+        'DEPTH_LIMIT': 7,
+        'ROBOTSTXT_OBEY': False,
+        'DOWNLOAD_DELAY': 2,
         'RANDOMIZE_DOWNLOAD_DELAY': True,
+        'USER_AGENT': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
     
     def parse(self, response):
-        """Парсинг страниц каталога статей"""
+        """Рекурсивный обход всех страниц"""
         self.logger.info(f"Парсинг: {response.url}")
         
-        # Найти все ссылки на статьи в каталоге
-        # На странице /catalog/ статьи имеют ссылки вида /catalog/XXX/statya-название/
+        # Пробуем извлечь статью с текущей страницы
+        yield from self.try_parse_article(response)
+        
+        # Рекурсивно следуем по всем внутренним ссылкам
         for link in response.css('a::attr(href)').getall():
             if not link:
                 continue
-                
+            
             full_url = response.urljoin(link)
             
-            # Статьи: /catalog/название-раздела/название-статьи/
-            # Или PDF-ссылки (пропускаем)
-            if '.pdf' in full_url.lower():
+            # Пропускаем внешние ссылки и файлы
+            if 'journaldoctor.ru' not in full_url:
                 continue
-                
-            # Ссылки на разделы или статьи в /catalog/
-            if '/catalog/' in full_url:
-                # Если это не главная страница каталога и не фильтр
-                if full_url.rstrip('/') != 'https://journaldoctor.ru/catalog' and '?' not in full_url:
-                    yield response.follow(full_url, self.parse_article)
-        
-        # Следовать по пагинации
-        for next_page in response.xpath('//a[contains(@class, "page")]/@href | //a[contains(text(), "→")]/@href').getall():
-            if next_page:
-                yield response.follow(next_page, self.parse)
-        
-        # Обход архива по годам (2007-2025)
-        for year in range(2007, 2026):
-            year_url = f"https://journaldoctor.ru/catalog/{year}/"
-            yield scrapy.Request(year_url, callback=self.parse, dont_filter=False)
+            if any(ext in full_url.lower() for ext in ['.pdf', '.jpg', '.png', '.gif', '.css', '.js']):
+                continue
+            
+            yield response.follow(full_url, self.parse)
     
-    def parse_article(self, response):
-        """Парсинг отдельной статьи"""
+    def try_parse_article(self, response):
+        """Попытка извлечь статью со страницы"""
         
-        # Извлечь заголовок
+        # Заголовок
         title = response.css('h1::text').get()
         if not title:
             title = response.css('.article-title::text, title::text').get()
         
         if not title:
-            self.logger.debug(f"Нет заголовка: {response.url}")
             return
         
         title = title.strip()
         
-        # Извлечь текст статьи
+        # Пропускаем служебные страницы
+        skip_titles = ['каталог', 'главная', 'контакты', 'о нас', 'поиск', 'catalog']
+        if any(skip in title.lower() for skip in skip_titles):
+            return
+        
+        # Текст статьи
         text_parts = []
         
-        # На journaldoctor.ru текст статьи находится в табах: Резюме, Основные положения и т.д.
-        # Собираем весь текст из различных блоков
         for selector in [
-            '#tabs-1 p',           # Резюме
-            '#tabs-2 p',           # Основные положения  
-            '#tabs-3 p',           # Заключение
-            '.tab-content p',      # Общий селектор для табов
-            'article p',           # Альтернатива
-            '.article-content p',
+            '#tabs-1 p::text',
+            '#tabs-2 p::text',
+            '#tabs-3 p::text',
+            '.tab-content p::text',
+            '.article-content p::text',
+            'article p::text',
+            '.content p::text',
         ]:
-            parts = response.css(f'{selector}::text').getall()
+            parts = response.css(selector).getall()
             if parts:
                 text_parts.extend(parts)
         
-        # Если не нашли в табах, ищем весь текст
         if not text_parts:
             text_parts = response.css('p::text').getall()
         
@@ -94,15 +87,14 @@ class JournalDoctorSpider(scrapy.Spider):
         text = re.sub(r'\s+', ' ', text)
         
         if len(text) < 100:
-            self.logger.debug(f"Слишком короткий текст ({len(text)} символов): {response.url}")
             return
         
-        # Извлечь категорию
+        # Категория
         category = response.css('.category::text, .tag::text, .rubric::text').get()
         if category:
             category = category.strip()
         
-        # Извлечь год
+        # Год
         year = None
         year_match = re.search(r'20\d{2}', response.url)
         if year_match:
@@ -114,7 +106,6 @@ class JournalDoctorSpider(scrapy.Spider):
                 if year_match:
                     year = year_match.group()
         
-        # Создать item
         item = MedicalArticle()
         item['source'] = 'journaldoctor'
         item['url'] = response.url
@@ -125,4 +116,3 @@ class JournalDoctorSpider(scrapy.Spider):
         item['crawled_at'] = datetime.now().isoformat()
         
         yield item
-
