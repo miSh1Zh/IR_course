@@ -59,7 +59,7 @@ while true; do
     echo "[$(date +%H:%M:%S)] Документов после: ${items_after}"
     echo "[$(date +%H:%M:%S)] Собрано: ${items_collected}"
     if [ "$items_collected" -lt "$MIN_ITEMS" ]; then
-        echo "[$(date +%H:%M:%S)] ⚠ journaldoctor может быть заблокирован (< ${MIN_ITEMS})"
+        echo "[$(date +%H:%M:%S)] journaldoctor может быть заблокирован (< ${MIN_ITEMS})"
         blocked_count=$((blocked_count + 1))
     fi
     
@@ -80,7 +80,7 @@ while true; do
     echo "[$(date +%H:%M:%S)] Документов после: ${items_after}"
     echo "[$(date +%H:%M:%S)] Собрано: ${items_collected}"
     if [ "$items_collected" -lt "$MIN_ITEMS" ]; then
-        echo "[$(date +%H:%M:%S)] ⚠ bnews может быть заблокирован (< ${MIN_ITEMS})"
+        echo "[$(date +%H:%M:%S)] bnews может быть заблокирован (< ${MIN_ITEMS})"
         blocked_count=$((blocked_count + 1))
     fi
     
@@ -101,7 +101,7 @@ while true; do
     echo "[$(date +%H:%M:%S)] Документов после: ${items_after}"
     echo "[$(date +%H:%M:%S)] Собрано: ${items_collected}"
     if [ "$items_collected" -lt "$MIN_ITEMS" ]; then
-        echo "[$(date +%H:%M:%S)] ⚠ rmj может быть заблокирован (< ${MIN_ITEMS})"
+        echo "[$(date +%H:%M:%S)] rmj может быть заблокирован (< ${MIN_ITEMS})"
         blocked_count=$((blocked_count + 1))
     fi
     
@@ -116,10 +116,11 @@ while true; do
         sleep ${PAUSE_BETWEEN}m
     fi
     
-    CYCLE=$((CYCLE + 1))
     
     echo ""
     echo "[$(date +%H:%M:%S)] Цикл ${CYCLE} завершён. Начинаем следующий..."
     echo ""
+    
+    CYCLE=$((CYCLE + 1))
 done
 
