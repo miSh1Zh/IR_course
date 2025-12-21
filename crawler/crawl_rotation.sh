@@ -2,9 +2,9 @@
 set -e
 
 # Конфигурация
-JOURNALDOCTOR_TIME=5  # минут для journaldoctor
-BNEWS_TIME=5           # минут для bnews
-RMJ_TIME=5            # минут для rmj
+JOURNALDOCTOR_TIME=10  # минут для journaldoctor
+BNEWS_TIME=8           # минут для bnews
+RMJ_TIME=12            # минут для rmj
 PAUSE_BETWEEN=2        # минут пауза между сменой источника
 LONG_PAUSE=30          # минут пауза при блокировке всех источников
 MIN_ITEMS=5            # минимум документов за сессию для считания источника активным

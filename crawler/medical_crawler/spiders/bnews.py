@@ -17,6 +17,7 @@ class BNewsSpider(scrapy.Spider):
     
     # Известные статьи из раздела /science/
     start_urls = [
+        'https://b-news.media',
         'https://b-news.media/science',
         'https://b-news.media/science/malenkij-geroj-kak-myshi-pomogayut-nauke',
         'https://b-news.media/science/movember-pochemu-noyabr-nazyvayut-mesyacem-muzhskogo-zdorovya-i-otrashivaniya-usov',
@@ -34,7 +35,7 @@ class BNewsSpider(scrapy.Spider):
     
     custom_settings = {
         'CLOSESPIDER_ITEMCOUNT': 50000,
-        'DEPTH_LIMIT': 3,
+        'DEPTH_LIMIT': 7,
         'DOWNLOAD_DELAY': 2,
         'RANDOMIZE_DOWNLOAD_DELAY': True,
         'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

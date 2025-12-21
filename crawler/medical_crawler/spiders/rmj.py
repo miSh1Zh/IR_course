@@ -16,22 +16,11 @@ class RMJSpider(scrapy.Spider):
     name = 'rmj'
     allowed_domains = ['rmj.ru', 'www.rmj.ru']
     
-    # Список основных категорий rmj.ru
-    categories = [
-        'nevrologiya', 'kardiologiya', 'endokrinologiya', 'gastroenterologiya',
-        'pulmonologiya', 'revmatologiya', 'dermatologiya', 'oftalmologiya',
-        'otorinolaringologiya', 'urologiya', 'ginekologiya', 'akusherstvo',
-        'pediatriya', 'onkologiya', 'allergologiya', 'immunologiya',
-        'infektsionnye_bolezni', 'khirurgiya', 'travmatologiya', 'ortopediya',
-        'psihiatriya', 'terapiya', 'obschaya_vrachebnaya_praktika',
-        'anesteziologiya', 'reanimatologiya', 'nefrologyia', 'gematologiya',
-    ]
-    
     start_urls = ['https://www.rmj.ru/articles/']
     
     custom_settings = {
         'CLOSESPIDER_ITEMCOUNT': 50000,
-        'DEPTH_LIMIT': 4,
+        'DEPTH_LIMIT': 7,
         'DOWNLOAD_DELAY': 3,
         'RANDOMIZE_DOWNLOAD_DELAY': True,
         'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -43,21 +32,18 @@ class RMJSpider(scrapy.Spider):
     }
     
     def start_requests(self):
-        """Генерация запросов для каждой категории"""
-        # Сначала главная страница каталога
+        """Генерация запросов - начинаем с главной страницы каталога"""
         yield scrapy.Request(
             'https://www.rmj.ru/articles/',
             callback=self.parse_catalog
         )
-        
-        # Затем каждая категория
-        for cat in self.categories:
-            url = f'https://www.rmj.ru/articles/{cat}/'
-            yield scrapy.Request(url, callback=self.parse_category, meta={'category': cat})
     
     def parse_catalog(self, response):
-        """Парсинг главной страницы каталога - поиск ссылок на категории и статьи"""
+        """Парсинг главной страницы каталога - автоматический сбор всех категорий"""
         self.logger.info(f"Парсинг каталога: {response.url}")
+        
+        # Извлекаем все ссылки на категории из каталога
+        category_links = set()
         
         for link in response.css('a::attr(href)').getall():
             if not link:
@@ -65,17 +51,21 @@ class RMJSpider(scrapy.Spider):
             
             full_url = response.urljoin(link)
             
-            if '/articles/' in full_url and full_url != 'https://www.rmj.ru/articles/':
-                # Определить тип ссылки
-                path = full_url.replace('https://www.rmj.ru/articles/', '').strip('/')
-                parts = path.split('/')
+            # Ссылка на категорию: /articles/{category}/
+            if '/articles/' in full_url:
+                path = full_url.replace('https://www.rmj.ru/articles/', '').replace('http://www.rmj.ru/articles/', '').strip('/')
                 
-                if len(parts) == 1 and parts[0]:
-                    # Категория
-                    yield response.follow(full_url, self.parse_category, meta={'category': parts[0]})
-                elif len(parts) >= 2:
-                    # Статья
-                    yield response.follow(full_url, self.parse_article, meta={'category': parts[0]})
+                # Только категории (один сегмент после /articles/)
+                if path and '/' not in path and not path.startswith('?'):
+                    category_links.add(path)
+        
+        self.logger.info(f"Найдено категорий: {len(category_links)}")
+        
+        # Переходим в каждую категорию
+        for category in category_links:
+            url = f'https://www.rmj.ru/articles/{category}/'
+            self.logger.info(f"Добавляем категорию: {category}")
+            yield scrapy.Request(url, callback=self.parse_category, meta={'category': category})
     
     def parse_category(self, response):
         """Парсинг страницы категории"""
