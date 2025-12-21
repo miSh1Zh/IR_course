@@ -32,7 +32,7 @@ restart: stop start
 
 crawl: start
 	@echo "Запуск краулера..."
-	docker compose up crawler
+	docker compose up -d crawler
 
 export:
 	@echo "Экспорт корпуса..."
@@ -93,8 +93,4 @@ clean:
 	rm -f analysis/corpus_stats.json
 	rm -f corpus_*.json corpus_*.json.gz
 	cd engine && make clean
-
-all: start crawl build-index stats test web
-	@echo ""
-	@echo "Веб-интерфейс запущен: http://localhost:5001"
 

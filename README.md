@@ -32,7 +32,6 @@ make zipf          # Анализ закона Ципфа
 make test          # Unit-тесты
 make web           # Веб-интерфейс
 make stop          # Остановка
-make all           # Полный цикл
 ```
 
 ### Импорт/экспорт

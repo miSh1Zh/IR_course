@@ -51,11 +51,6 @@ int main(int argc, char* argv[]) {
         std::cout << "Используется выходной файл по умолчанию: " << output_file << std::endl;
     }
     
-    std::cout << "========================================" << std::endl;
-    std::cout << "      ПОСТРОЕНИЕ ИНДЕКСА" << std::endl;
-    std::cout << "========================================" << std::endl;
-    std::cout << std::endl;
-    
     Indexer indexer;
     
     auto start = std::chrono::high_resolution_clock::now();

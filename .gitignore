@@ -12,3 +12,9 @@ ir_labs.md
 
 data/*.json
 data/*.bin
+analysis/*.png
+analysis/*.txt
+analysis/corpus_stats.json
+
+corpus_*.json
+corpus_*.json.gz
