@@ -18,3 +18,11 @@ analysis/corpus_stats.json
 
 corpus_*.json
 corpus_*.json.gz
+
+# Бинарные файлы C++
+engine/indexer
+engine/searcher
+engine/*.o
+engine/tests/test_*
+!engine/tests/*.cpp
+!engine/tests/*.sh

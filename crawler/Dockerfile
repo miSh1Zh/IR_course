@@ -10,9 +10,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY medical_crawler /app/medical_crawler
 COPY scrapy.cfg /app/
 COPY crawl_all.sh /app/
+COPY crawl_rotation.sh /app/
 
 # Создать директорию для логов
-RUN mkdir -p /app/logs && chmod +x /app/crawl_all.sh
+RUN mkdir -p /app/logs && chmod +x /app/crawl_all.sh /app/crawl_rotation.sh
 
-# Запуск всех spider'ов
-CMD ["/app/crawl_all.sh"]
+# Запуск по умолчанию - ротационный режим
+CMD ["/app/crawl_rotation.sh"]

@@ -1,11 +1,12 @@
-.PHONY: help start stop restart crawl export import build-index stats zipf test clean
+.PHONY: help start stop restart crawl crawl-once export import build-index stats zipf test clean
 
 help:
 	@echo "Makefile для управления IR проектом"
 	@echo ""
 	@echo "Основные команды:"
 	@echo "  make start        - Запустить MongoDB"
-	@echo "  make crawl        - Запустить краулер для сбора корпуса"
+	@echo "  make crawl        - Запустить краулер (ротационный режим)"
+	@echo "  make crawl-once   - Однократный запуск всех spider'ов"
 	@echo "  make build-index  - Экспорт корпуса и построение индекса"
 	@echo "  make stats        - Показать статистику корпуса"
 	@echo "  make zipf         - Проверить закон Ципфа"
@@ -31,8 +32,13 @@ stop:
 restart: stop start
 
 crawl: start
-	@echo "Запуск краулера..."
+	@echo "Запуск краулера (ротационный режим)..."
 	docker compose up -d crawler
+	@echo "Краулер работает в фоне. Логи: docker logs -f ir_crawler"
+
+crawl-once: start
+	@echo "Однократный запуск всех spider'ов..."
+	docker compose run --rm crawler /app/crawl_all.sh
 
 export:
 	@echo "Экспорт корпуса..."
