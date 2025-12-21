@@ -25,6 +25,9 @@ services:
         condition: service_healthy
     environment:
       - MONGO_URI=mongodb://mongodb:27017/medical_search
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DB=medical_search
     volumes:
       - ./crawler/logs:/app/logs
       - ./crawler/medical_crawler:/app/medical_crawler:ro

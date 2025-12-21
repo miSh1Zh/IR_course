@@ -9,32 +9,36 @@ PAUSE_BETWEEN=2        # минут пауза между сменой исто�
 LONG_PAUSE=30          # минут пауза при блокировке всех источников
 MIN_ITEMS=5            # минимум документов за сессию для считания источника активным
 
+# MongoDB connection (внутри Docker сети)
+MONGO_HOST="${MONGO_HOST:-mongodb}"
+MONGO_PORT="${MONGO_PORT:-27017}"
+MONGO_DB="${MONGO_DB:-medical_search}"
+
 echo "Стратегия: по очереди с ограничением времени"
 echo "journaldoctor: ${JOURNALDOCTOR_TIME} мин"
 echo "bnews: ${BNEWS_TIME} мин"
 echo "rmj: ${RMJ_TIME} мин"
+echo "MongoDB: ${MONGO_HOST}:${MONGO_PORT}/${MONGO_DB}"
 echo ""
+
+# Функция для подсчета документов в MongoDB
+count_docs() {
+    local source=$1
+    # Используем Python с pymongo для подсчета
+    python3 -c "
+from pymongo import MongoClient
+try:
+    client = MongoClient('mongodb://${MONGO_HOST}:${MONGO_PORT}/')
+    db = client['${MONGO_DB}']
+    count = db.articles.count_documents({'source': '${source}'})
+    print(count)
+except:
+    print(0)
+" 2>/dev/null || echo "0"
+}
 
 # Счётчик циклов
 CYCLE=1
-
-# Функция для подсчета собранных документов
-count_items() {
-    local spider_name=$1
-    local log_file="/app/logs/${spider_name}_stats.log"
-    
-    # Ищем строку вида "item_scraped_count': 123" в логах Scrapy
-    scrapy crawl "$spider_name" -L INFO 2>&1 | tee "$log_file" &
-    local pid=$!
-    
-    # Ждем завершения с таймаутом
-    local time_limit=$2
-    timeout "${time_limit}m" wait $pid 2>/dev/null || true
-    
-    # Извлекаем количество собранных items
-    local count=$(grep -oP "item_scraped_count': \K\d+" "$log_file" 2>/dev/null | tail -1)
-    echo "${count:-0}"
-}
 
 while true; do
     echo "Цикл ${CYCLE}"
@@ -44,14 +48,18 @@ while true; do
     # 1. journaldoctor
     echo ""
     echo "[$(date +%H:%M:%S)] === journaldoctor (${JOURNALDOCTOR_TIME} мин) ==="
-    items_before=$(docker exec ir_mongodb mongosh medical_search --quiet --eval "db.articles.countDocuments({source: 'journaldoctor'})" 2>/dev/null || echo "0")
-    timeout ${JOURNALDOCTOR_TIME}m scrapy crawl journaldoctor -L INFO || true
-    items_after=$(docker exec ir_mongodb mongosh medical_search --quiet --eval "db.articles.countDocuments({source: 'journaldoctor'})" 2>/dev/null || echo "0")
+    items_before=$(count_docs "journaldoctor")
+    echo "[$(date +%H:%M:%S)] Документов до: ${items_before}"
+    
+    timeout ${JOURNALDOCTOR_TIME}m scrapy crawl journaldoctor -L INFO 2>&1 | tee -a /app/logs/rotation.log || true
+    
+    items_after=$(count_docs "journaldoctor")
     items_collected=$((items_after - items_before))
     
-    echo "[$(date +%H:%M:%S)] Собрано документов: ${items_collected}"
+    echo "[$(date +%H:%M:%S)] Документов после: ${items_after}"
+    echo "[$(date +%H:%M:%S)] Собрано: ${items_collected}"
     if [ "$items_collected" -lt "$MIN_ITEMS" ]; then
-        echo "[$(date +%H:%M:%S)] ВНИМАНИЕ: journaldoctor может быть заблокирован (собрано < ${MIN_ITEMS})"
+        echo "[$(date +%H:%M:%S)] ⚠ journaldoctor может быть заблокирован (< ${MIN_ITEMS})"
         blocked_count=$((blocked_count + 1))
     fi
     
@@ -61,14 +69,18 @@ while true; do
     # 2. bnews
     echo ""
     echo "[$(date +%H:%M:%S)] === bnews (${BNEWS_TIME} мин) ==="
-    items_before=$(docker exec ir_mongodb mongosh medical_search --quiet --eval "db.articles.countDocuments({source: 'bnews'})" 2>/dev/null || echo "0")
-    timeout ${BNEWS_TIME}m scrapy crawl bnews -L INFO || true
-    items_after=$(docker exec ir_mongodb mongosh medical_search --quiet --eval "db.articles.countDocuments({source: 'bnews'})" 2>/dev/null || echo "0")
+    items_before=$(count_docs "bnews")
+    echo "[$(date +%H:%M:%S)] Документов до: ${items_before}"
+    
+    timeout ${BNEWS_TIME}m scrapy crawl bnews -L INFO 2>&1 | tee -a /app/logs/rotation.log || true
+    
+    items_after=$(count_docs "bnews")
     items_collected=$((items_after - items_before))
     
-    echo "[$(date +%H:%M:%S)] Собрано документов: ${items_collected}"
+    echo "[$(date +%H:%M:%S)] Документов после: ${items_after}"
+    echo "[$(date +%H:%M:%S)] Собрано: ${items_collected}"
     if [ "$items_collected" -lt "$MIN_ITEMS" ]; then
-        echo "[$(date +%H:%M:%S)] ВНИМАНИЕ: bnews может быть заблокирован (собрано < ${MIN_ITEMS})"
+        echo "[$(date +%H:%M:%S)] ⚠ bnews может быть заблокирован (< ${MIN_ITEMS})"
         blocked_count=$((blocked_count + 1))
     fi
     
@@ -78,14 +90,18 @@ while true; do
     # 3. rmj
     echo ""
     echo "[$(date +%H:%M:%S)] === rmj (${RMJ_TIME} мин) ==="
-    items_before=$(docker exec ir_mongodb mongosh medical_search --quiet --eval "db.articles.countDocuments({source: 'rmj'})" 2>/dev/null || echo "0")
-    timeout ${RMJ_TIME}m scrapy crawl rmj -L INFO || true
-    items_after=$(docker exec ir_mongodb mongosh medical_search --quiet --eval "db.articles.countDocuments({source: 'rmj'})" 2>/dev/null || echo "0")
+    items_before=$(count_docs "rmj")
+    echo "[$(date +%H:%M:%S)] Документов до: ${items_before}"
+    
+    timeout ${RMJ_TIME}m scrapy crawl rmj -L INFO 2>&1 | tee -a /app/logs/rotation.log || true
+    
+    items_after=$(count_docs "rmj")
     items_collected=$((items_after - items_before))
     
-    echo "[$(date +%H:%M:%S)] Собрано документов: ${items_collected}"
+    echo "[$(date +%H:%M:%S)] Документов после: ${items_after}"
+    echo "[$(date +%H:%M:%S)] Собрано: ${items_collected}"
     if [ "$items_collected" -lt "$MIN_ITEMS" ]; then
-        echo "[$(date +%H:%M:%S)] ВНИМАНИЕ: rmj может быть заблокирован (собрано < ${MIN_ITEMS})"
+        echo "[$(date +%H:%M:%S)] ⚠ rmj может быть заблокирован (< ${MIN_ITEMS})"
         blocked_count=$((blocked_count + 1))
     fi
     
@@ -103,7 +119,7 @@ while true; do
     CYCLE=$((CYCLE + 1))
     
     echo ""
-    echo "[$(date +%H:%M:%S)] Цикл завершён. Начинаем следующий..."
+    echo "[$(date +%H:%M:%S)] Цикл ${CYCLE} завершён. Начинаем следующий..."
     echo ""
 done
 

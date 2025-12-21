@@ -24,7 +24,6 @@ def main():
     
     stats = db.command("collstats", "articles")
     raw_size_mb = stats.get('size', 0) / (1024 * 1024)
-    storage_mb = stats.get('storageSize', 0) / (1024 * 1024)
     
     print(f"1. Количество документов: {total_docs}")
     
@@ -48,7 +47,7 @@ def main():
         avg_text_chars = text_stats['avg_text']
         avg_text_kb = avg_text_chars / 1024
         
-        print(f"2. Размер «сырых» данных: {raw_size_mb:.2f} МБ (хранилище: {storage_mb:.2f} МБ)")
+        print(f"2. Размер «сырых» данных: {raw_size_mb:.2f} МБ")
         print(f"3. Размер выделенного текста: {total_text_mb:.2f} МБ")
         print(f"4. Средний размер текста в документе: {avg_text_chars:.0f} символов ({avg_text_kb:.1f} КБ)")
     
