@@ -20,7 +20,7 @@ class RMJSpider(scrapy.Spider):
     
     custom_settings = {
         'CLOSESPIDER_ITEMCOUNT': 50000,
-        'DEPTH_LIMIT': 7,
+        'DEPTH_LIMIT': 10,
         'DOWNLOAD_DELAY': 4,
         'RANDOMIZE_DOWNLOAD_DELAY': True,
         'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -73,8 +73,14 @@ class RMJSpider(scrapy.Spider):
         category = response.meta.get('category', '')
         self.logger.info(f"Парсинг категории '{category}': {response.url}")
         
-        # Ссылки на статьи
-        for link in response.css('a::attr(href)').getall():
+        # Ссылки на статьи (несколько вариантов селекторов)
+        for link in response.css(
+            'a.article-title::attr(href), '
+            'h3 a::attr(href), '
+            '.article-link::attr(href), '
+            '.article-preview a::attr(href), '
+            'a::attr(href)'
+        ).getall():
             if not link:
                 continue
             
@@ -86,8 +92,15 @@ class RMJSpider(scrapy.Spider):
                 if path and '/' not in path and not path.startswith('?'):
                     yield response.follow(full_url, self.parse_article, meta={'category': category})
         
-        # Пагинация
-        for page_link in response.css('a.pagination__link::attr(href), .pagination a::attr(href)').getall():
+        # Пагинация (несколько вариантов селекторов)
+        for page_link in response.css(
+            'a.next::attr(href), '
+            'a.pagination__link::attr(href), '
+            '.pagination a::attr(href), '
+            'a[rel="next"]::attr(href), '
+            '.pager__item--next a::attr(href), '
+            'a.pager-next::attr(href)'
+        ).getall():
             if page_link:
                 yield response.follow(page_link, self.parse_category, meta={'category': category})
     

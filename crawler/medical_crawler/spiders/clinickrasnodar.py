@@ -15,14 +15,23 @@ class ClinicKrasnodarSpider(scrapy.Spider):
     
     start_urls = [
         'https://xn--80ahbdcbmjcgaeqocq5cyc.xn--p1ai/articles/',  # Punycode для клиникакраснодар.рф
+        'https://клиникакраснодар.рф/articles/',  # Кириллица (на случай редиректа)
     ]
     
     custom_settings = {
         'CLOSESPIDER_ITEMCOUNT': 50000,
-        'DEPTH_LIMIT': 5,
-        'DOWNLOAD_DELAY': 4,
+        'DEPTH_LIMIT': 6,
+        'DOWNLOAD_DELAY': 5,
         'RANDOMIZE_DOWNLOAD_DELAY': True,
+        'ROBOTSTXT_OBEY': False,
         'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'DEFAULT_REQUEST_HEADERS': {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'ru-RU,ru;q=0.9',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+        },
+        'COOKIES_ENABLED': True,
         'JOBDIR': 'logs/clinickrasnodar_state',
     }
     
@@ -38,13 +47,21 @@ class ClinicKrasnodarSpider(scrapy.Spider):
             full_url = response.urljoin(link)
             
             # Статьи в разделе /articles/
-            if '/articles/' in full_url and full_url.count('/') > full_url.count('/articles/'):
-                yield response.follow(full_url, self.parse_article)
+            if '/articles/' in full_url:
+                path_depth = full_url.rstrip('/').count('/')
+                # Статья имеет минимум 4 слэша: /articles/slug/
+                if path_depth >= 4:
+                    yield response.follow(full_url, self.parse_article)
         
-        # Пагинация
-        next_page = response.css('a.next::attr(href), .pagination a.next::attr(href)').get()
-        if next_page:
-            yield response.follow(next_page, self.parse)
+        # Пагинация (несколько вариантов селекторов)
+        for page_link in response.css(
+            'a.next::attr(href), '
+            '.pagination a.next::attr(href), '
+            '.pagination a::attr(href), '
+            'a[rel="next"]::attr(href)'
+        ).getall():
+            if page_link:
+                yield response.follow(page_link, self.parse)
     
     def parse_article(self, response):
         """Парсинг статьи"""

@@ -18,7 +18,7 @@ class TakzdorovoSpider(scrapy.Spider):
     
     custom_settings = {
         'CLOSESPIDER_ITEMCOUNT': 50000,
-        'DEPTH_LIMIT': 6,
+        'DEPTH_LIMIT': 7,
         'DOWNLOAD_DELAY': 3,
         'RANDOMIZE_DOWNLOAD_DELAY': True,
         'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -29,23 +29,40 @@ class TakzdorovoSpider(scrapy.Spider):
         """Парсинг списка статей"""
         self.logger.info(f"Парсинг: {response.url}")
         
-        # Ссылки на статьи
+        # Ссылки на статьи и категории
         for link in response.css('a::attr(href)').getall():
             if not link:
                 continue
             
             full_url = response.urljoin(link)
             
-            # Статьи имеют вид /stati/{slug}/
-            if '/stati/' in full_url and full_url != 'https://www.takzdorovo.ru/stati/':
+            # Категория: /stati/?rubrika=...
+            if '/stati/?rubrika=' in full_url or '/stati?rubrika=' in full_url:
+                yield response.follow(full_url, self.parse)
+                continue
+            
+            # Статья: /stati/{slug}/ (без query параметров)
+            if '/stati/' in full_url and '?' not in full_url:
+                # Пропускаем главную страницу списка
+                if full_url.rstrip('/') == 'https://www.takzdorovo.ru/stati':
+                    continue
+                
+                # Извлекаем slug после /stati/
                 path = full_url.replace('https://www.takzdorovo.ru/stati/', '').replace('http://www.takzdorovo.ru/stati/', '').strip('/')
-                if path and '/' not in path:
+                
+                # Если есть slug и это не служебная страница
+                if path and not path.startswith('page'):
                     yield response.follow(full_url, self.parse_article)
         
-        # Пагинация
-        next_page = response.css('a.next::attr(href), .pagination a.next::attr(href)').get()
-        if next_page:
-            yield response.follow(next_page, self.parse)
+        # Пагинация (несколько вариантов селекторов)
+        for page_link in response.css(
+            '.pagination a::attr(href), '
+            'a.next::attr(href), '
+            'a.pagination__next::attr(href), '
+            'a[rel="next"]::attr(href)'
+        ).getall():
+            if page_link:
+                yield response.follow(page_link, self.parse)
     
     def parse_article(self, response):
         """Парсинг статьи"""

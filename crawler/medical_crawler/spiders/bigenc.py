@@ -22,17 +22,26 @@ class BigencSpider(scrapy.Spider):
     allowed_domains = ['bigenc.ru']
     
     start_urls = [
+        # Существующие категории
         'https://bigenc.ru/t/medics',
         'https://bigenc.ru/t/biology',
         'https://bigenc.ru/t/medicine',
         'https://bigenc.ru/t/psychology',
         'https://bigenc.ru/t/internal_organs',
         'https://bigenc.ru/t/symptoms',
+        # Дополнительные медицинские/биологические категории
+        'https://bigenc.ru/t/diseases',
+        'https://bigenc.ru/t/anatomy',
+        'https://bigenc.ru/t/physiology',
+        'https://bigenc.ru/t/biochemistry',
+        'https://bigenc.ru/t/pharmaceutics',
+        'https://bigenc.ru/t/pharmacology',
+        'https://bigenc.ru/t/genetics',
     ]
     
     custom_settings = {
         'CLOSESPIDER_ITEMCOUNT': 50000,
-        'DEPTH_LIMIT': 5,
+        'DEPTH_LIMIT': 8,
         'DOWNLOAD_DELAY': 4,
         'RANDOMIZE_DOWNLOAD_DELAY': True,
         'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -55,15 +64,18 @@ class BigencSpider(scrapy.Spider):
             
             # Статья: /c/{slug}
             if '/c/' in full_url:
-                # Извлекаем slug
-                match = re.search(r'/c/([a-z0-9-]+)', full_url)
-                if match:
-                    yield response.follow(full_url, self.parse_article, meta={'category': category})
+                yield response.follow(full_url, self.parse_article, meta={'category': category})
         
-        # Пагинация
-        next_page = response.css('a.next::attr(href), .pagination a::attr(href)').get()
-        if next_page:
-            yield response.follow(next_page, self.parse, meta={'category': category})
+        # Пагинация (несколько вариантов селекторов)
+        for page_link in response.css(
+            'a.next::attr(href), '
+            '.pagination a::attr(href), '
+            'a[rel="next"]::attr(href), '
+            '.pager a::attr(href), '
+            'a.page-link::attr(href)'
+        ).getall():
+            if page_link:
+                yield response.follow(page_link, self.parse, meta={'category': category})
     
     def _extract_category(self, url):
         """Извлечь категорию из URL"""
@@ -74,6 +86,13 @@ class BigencSpider(scrapy.Spider):
             'psychology': 'Психология',
             'internal_organs': 'Внутренние органы',
             'symptoms': 'Симптомы',
+            'diseases': 'Болезни',
+            'anatomy': 'Анатомия',
+            'physiology': 'Физиология',
+            'biochemistry': 'Биохимия',
+            'pharmaceutics': 'Фармацевтика',
+            'pharmacology': 'Фармакология',
+            'genetics': 'Генетика',
         }
         
         for key, value in categories.items():

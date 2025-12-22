@@ -22,7 +22,7 @@ class BNewsSpider(scrapy.Spider):
     
     custom_settings = {
         'CLOSESPIDER_ITEMCOUNT': 50000,
-        'DEPTH_LIMIT': 7,
+        'DEPTH_LIMIT': 10,
         'DOWNLOAD_DELAY': 5,
         'RANDOMIZE_DOWNLOAD_DELAY': True,
         'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -36,21 +36,40 @@ class BNewsSpider(scrapy.Spider):
         # Извлекаем категорию из URL
         category = self._extract_category(response.url)
         
-        # Ищем все ссылки на статьи
+        # Ищем все ссылки на b-news.media
         for link in response.css('a::attr(href)').getall():
             if not link:
                 continue
             
             full_url = response.urljoin(link)
             
-            # Проверяем, что это ссылка на статью из нужного раздела
-            if self._is_article_url(full_url, category):
+            if 'b-news.media' not in full_url:
+                continue
+            
+            # Исключаем служебные страницы
+            if any(x in full_url for x in ['/about', '/contacts', '/policy', '/tag/', '/author/', '#']):
+                continue
+            
+            # Подсчитываем глубину пути
+            path_depth = full_url.rstrip('/').count('/')
+            
+            # 4+ слэша = статья (https://b-news.media/category/article)
+            if path_depth >= 4:
                 yield response.follow(full_url, self.parse_article, meta={'category': category})
+            # 3 слэша = раздел (https://b-news.media/category)
+            elif path_depth == 3:
+                yield response.follow(full_url, self.parse, meta={'category': category})
         
-        # Кнопка "Загрузить еще" или пагинация
-        load_more = response.css('button.load-more::attr(data-page)').get()
-        if load_more:
-            self.logger.info(f"Найдена пагинация: страница {load_more}")
+        # Пагинация / Load More (несколько вариантов)
+        for next_link in response.css(
+            '.load-more::attr(href), '
+            '.show-more::attr(href), '
+            '.pagination a::attr(href), '
+            'a[rel="next"]::attr(href), '
+            'a.next::attr(href)'
+        ).getall():
+            if next_link:
+                yield response.follow(next_link, self.parse, meta={'category': category})
     
     def _extract_category(self, url):
         """Извлечь категорию из URL"""

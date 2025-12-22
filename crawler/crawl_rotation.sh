@@ -1,27 +1,32 @@
 #!/bin/bash
 set -e
 
-# Конфигурация
-JOURNALDOCTOR_TIME=15  # минут для journaldoctor
-BNEWS_TIME=5          # минут для bnews
-RMJ_TIME=15            # минут для rmj
-TAKZDOROVO_TIME=15     # минут для takzdorovo
-PROBOLEZNY_TIME=15     # минут для probolezny
-CLINICKRASNODAR_TIME=8 # минут для clinickrasnodar
-BIGENC_TIME=15         # минут для bigenc
-PAUSE_BETWEEN=2        # минут пауза между сменой источника
+# Конфигурация (время в минутах, перераспределено по продуктивности источников)
+PROBOLEZNY_TIME=20     # работает отлично
+JOURNALDOCTOR_TIME=20  # работает отлично
+RMJ_TIME=30            # КРИТИЧНО - самый крупный источник
+TAKZDOROVO_TIME=15     # после исправлений
+CLINICKRASNODAR_TIME=10 # после исправлений
+BIGENC_TIME=10         # ограниченный контент
+BNEWS_TIME=8           # ограниченный контент
+PAUSE_BETWEEN=5        # минут пауза между сменой источника
 LONG_PAUSE=60          # минут пауза при блокировке всех источников
-MIN_ITEMS=3            # минимум документов за сессию (уменьшен с 5 до 3)
+MIN_ITEMS=3            # минимум документов за сессию
 
 # MongoDB connection (внутри Docker сети)
 MONGO_HOST="${MONGO_HOST:-mongodb}"
 MONGO_PORT="${MONGO_PORT:-27017}"
 MONGO_DB="${MONGO_DB:-medical_search}"
 
-echo "Стратегия:"
+echo "Стратегия (перераспределена по продуктивности):"
+echo "probolezny: ${PROBOLEZNY_TIME} мин"
 echo "journaldoctor: ${JOURNALDOCTOR_TIME} мин"
+echo "rmj: ${RMJ_TIME} мин (критически важный источник)"
+echo "takzdorovo: ${TAKZDOROVO_TIME} мин"
+echo "clinickrasnodar: ${CLINICKRASNODAR_TIME} мин"
+echo "bigenc: ${BIGENC_TIME} мин"
 echo "bnews: ${BNEWS_TIME} мин"
-echo "rmj: ${RMJ_TIME} мин"
+echo "Пауза между источниками: ${PAUSE_BETWEEN} мин"
 echo "MongoDB: ${MONGO_HOST}:${MONGO_PORT}/${MONGO_DB}"
 echo ""
 
