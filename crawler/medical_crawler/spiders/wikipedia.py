@@ -11,7 +11,7 @@ class WikipediaSpider(scrapy.Spider):
     name = 'wikipedia'
     allowed_domains = ['ru.wikipedia.org']
     
-    # Медицинские категории Wikipedia (проверены на существование)
+    # Медицинские категории Wikipedia
     start_urls = [
         # Основные разделы медицины
         'https://ru.wikipedia.org/wiki/Категория:Медицина',
@@ -131,21 +131,16 @@ class WikipediaSpider(scrapy.Spider):
             # Статьи в категории
             for link in response.css('#mw-pages a::attr(href)').getall():
                 if link and link.startswith('/wiki/') and ':' not in link:
-                    self.logger.debug(f"Найдена статья: {link}")
                     yield response.follow(link, self.parse)
             
             # Подкатегории
             for link in response.css('#mw-subcategories a::attr(href)').getall():
                 if link and '/wiki/' in link:
-                    decoded_link = unquote(link)
-                    if 'Категория:' in decoded_link or 'Category:' in link:
-                        self.logger.debug(f"Найдена подкатегория: {link}")
-                        yield response.follow(link, self.parse)
+                    yield response.follow(link, self.parse)
             
-            # Пагинация категории (следующая страница)
-            next_page = response.css('a:contains("следующая страница")::attr(href), a:contains("Следующая страница")::attr(href)').get()
+            # Пагинация категории
+            next_page = response.css('a:contains("следующая страница")::attr(href)').get()
             if next_page:
-                self.logger.info(f"Пагинация: {next_page}")
                 yield response.follow(next_page, self.parse)
         else:
             # Это статья — извлекаем данные
@@ -153,33 +148,29 @@ class WikipediaSpider(scrapy.Spider):
     
     def parse_article(self, response):
         """Парсинг статьи Wikipedia"""
-        # Заголовок
-        title = response.css('#firstHeading::text, #firstHeading span::text').get()
+        # Заголовок (несколько вариантов селектора)
+        title = response.css('#firstHeading span::text').get()
+        if not title:
+            title = response.css('#firstHeading::text').get()
+        if not title:
+            title = response.css('h1.firstHeading::text').get()
         if not title:
             title = response.css('h1::text').get()
         
         if not title:
-            self.logger.debug(f"Нет заголовка: {response.url}")
             return
         
         title = title.strip()
         
-        # Текст статьи — берём ВСЕ параграфы из контента
-        paragraphs = response.css('#mw-content-text .mw-parser-output p')
-        text_parts = []
-        for p in paragraphs:
-            # Извлекаем весь текст из параграфа (включая вложенные элементы)
-            p_text = ''.join(p.css('*::text').getall())
-            if p_text.strip():
-                text_parts.append(p_text.strip())
-        
-        text = ' '.join(text_parts)
+        # Текст статьи — берём всё
+        text_parts = response.css('#mw-content-text .mw-parser-output > p ::text').getall()
+        text = ' '.join([t.strip() for t in text_parts if t.strip()])
         text = re.sub(r'\s+', ' ', text).strip()
-        text = re.sub(r'\[\d+\]', '', text)  # Убираем [1], [2]
-        text = re.sub(r'\[править[^\]]*\]', '', text)  # Убираем [править | править код]
+        text = re.sub(r'\[\d+\]', '', text)
+        text = re.sub(r'\[править[^\]]*\]', '', text)
         
-        if len(text) < 150:
-            self.logger.debug(f"Короткий текст ({len(text)}): {title}")
+        # Минимум 50 символов (очень низкий порог)
+        if len(text) < 50:
             return
         
         # Категория (первая из списка)

@@ -150,7 +150,7 @@ class RMJSpider(scrapy.Spider):
         text = ' '.join(text_parts).strip()
         text = re.sub(r'\s+', ' ', text)
         
-        if len(text) < 100:
+        if len(text) < 50:
             return
         
         # Категория
