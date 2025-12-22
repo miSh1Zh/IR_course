@@ -21,8 +21,9 @@ class RMJSpider(scrapy.Spider):
     custom_settings = {
         'CLOSESPIDER_ITEMCOUNT': 50000,
         'DEPTH_LIMIT': 10,
-        'DOWNLOAD_DELAY': 4,
+        'DOWNLOAD_DELAY': 5,
         'RANDOMIZE_DOWNLOAD_DELAY': True,
+        'ROBOTSTXT_OBEY': False,
         'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'COOKIES_ENABLED': True,
         'DEFAULT_REQUEST_HEADERS': {
