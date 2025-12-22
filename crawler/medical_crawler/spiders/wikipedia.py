@@ -11,12 +11,95 @@ class WikipediaSpider(scrapy.Spider):
     name = 'wikipedia'
     allowed_domains = ['ru.wikipedia.org']
     
+    # Медицинские категории Wikipedia (проверены на существование)
     start_urls = [
-        'https://ru.wikipedia.org/wiki/Медицина',
+        # Основные разделы медицины
         'https://ru.wikipedia.org/wiki/Категория:Медицина',
         'https://ru.wikipedia.org/wiki/Категория:Заболевания',
-        'https://ru.wikipedia.org/wiki/Категория:Анатомия',
-        'https://ru.wikipedia.org/wiki/Категория:Биология',
+        'https://ru.wikipedia.org/wiki/Категория:Симптомы',
+        'https://ru.wikipedia.org/wiki/Категория:Медицинская_диагностика',
+        'https://ru.wikipedia.org/wiki/Категория:Клиническая_медицина',
+        'https://ru.wikipedia.org/wiki/Категория:Доказательная_медицина',
+        # Анатомия и физиология
+        'https://ru.wikipedia.org/wiki/Категория:Анатомия_человека',
+        'https://ru.wikipedia.org/wiki/Категория:Физиология_человека',
+        'https://ru.wikipedia.org/wiki/Категория:Гистология',
+        'https://ru.wikipedia.org/wiki/Категория:Эмбриология',
+        'https://ru.wikipedia.org/wiki/Категория:Патология',
+        # Фармакология
+        'https://ru.wikipedia.org/wiki/Категория:Фармакология',
+        'https://ru.wikipedia.org/wiki/Категория:Лекарственные_средства',
+        'https://ru.wikipedia.org/wiki/Категория:Антибиотики',
+        'https://ru.wikipedia.org/wiki/Категория:Витамины',
+        'https://ru.wikipedia.org/wiki/Категория:Вакцинация',
+        # Специальности
+        'https://ru.wikipedia.org/wiki/Категория:Хирургия',
+        'https://ru.wikipedia.org/wiki/Категория:Нейрохирургия',
+        'https://ru.wikipedia.org/wiki/Категория:Терапия',
+        'https://ru.wikipedia.org/wiki/Категория:Кардиология',
+        'https://ru.wikipedia.org/wiki/Категория:Неврология',
+        'https://ru.wikipedia.org/wiki/Категория:Онкология',
+        'https://ru.wikipedia.org/wiki/Категория:Психиатрия',
+        'https://ru.wikipedia.org/wiki/Категория:Офтальмология',
+        'https://ru.wikipedia.org/wiki/Категория:Эндокринология',
+        'https://ru.wikipedia.org/wiki/Категория:Гастроэнтерология',
+        'https://ru.wikipedia.org/wiki/Категория:Пульмонология',
+        'https://ru.wikipedia.org/wiki/Категория:Дерматология',
+        'https://ru.wikipedia.org/wiki/Категория:Урология',
+        'https://ru.wikipedia.org/wiki/Категория:Гинекология',
+        'https://ru.wikipedia.org/wiki/Категория:Акушерство',
+        'https://ru.wikipedia.org/wiki/Категория:Педиатрия',
+        'https://ru.wikipedia.org/wiki/Категория:Неонатология',
+        'https://ru.wikipedia.org/wiki/Категория:Геронтология',
+        'https://ru.wikipedia.org/wiki/Категория:Ревматология',
+        'https://ru.wikipedia.org/wiki/Категория:Нефрология',
+        'https://ru.wikipedia.org/wiki/Категория:Гематология',
+        'https://ru.wikipedia.org/wiki/Категория:Иммунология',
+        'https://ru.wikipedia.org/wiki/Категория:Аллергология',
+        'https://ru.wikipedia.org/wiki/Категория:Травматология',
+        'https://ru.wikipedia.org/wiki/Категория:Ортопедия',
+        'https://ru.wikipedia.org/wiki/Категория:Оториноларингология',
+        'https://ru.wikipedia.org/wiki/Категория:Стоматология',
+        'https://ru.wikipedia.org/wiki/Категория:Венерология',
+        'https://ru.wikipedia.org/wiki/Категория:Наркология',
+        'https://ru.wikipedia.org/wiki/Категория:Токсикология',
+        # Интенсивная терапия
+        'https://ru.wikipedia.org/wiki/Категория:Реаниматология',
+        'https://ru.wikipedia.org/wiki/Категория:Анестезиология',
+        'https://ru.wikipedia.org/wiki/Категория:Интенсивная_терапия',
+        # Заболевания по системам
+        'https://ru.wikipedia.org/wiki/Категория:Инфекционные_заболевания',
+        'https://ru.wikipedia.org/wiki/Категория:Заболевания_сердца',
+        'https://ru.wikipedia.org/wiki/Категория:Заболевания_печени',
+        'https://ru.wikipedia.org/wiki/Категория:Заболевания_почек',
+        'https://ru.wikipedia.org/wiki/Категория:Заболевания_лёгких',
+        'https://ru.wikipedia.org/wiki/Категория:Заболевания_глаз',
+        'https://ru.wikipedia.org/wiki/Категория:Заболевания_нервной_системы',
+        'https://ru.wikipedia.org/wiki/Категория:Психические_расстройства',
+        'https://ru.wikipedia.org/wiki/Категория:Аутоиммунные_заболевания',
+        'https://ru.wikipedia.org/wiki/Категория:Наследственные_болезни',
+        'https://ru.wikipedia.org/wiki/Категория:Паразитарные_заболевания',
+        'https://ru.wikipedia.org/wiki/Категория:Злокачественные_новообразования',
+        # Конкретные заболевания
+        'https://ru.wikipedia.org/wiki/Категория:Сахарный_диабет',
+        'https://ru.wikipedia.org/wiki/Категория:Инсульт',
+        'https://ru.wikipedia.org/wiki/Категория:Инфаркт',
+        'https://ru.wikipedia.org/wiki/Категория:Эпилепсия',
+        'https://ru.wikipedia.org/wiki/Категория:Бронхиальная_астма',
+        'https://ru.wikipedia.org/wiki/Категория:Туберкулёз',
+        'https://ru.wikipedia.org/wiki/Категория:ВИЧ-инфекция',
+        'https://ru.wikipedia.org/wiki/Категория:Гепатит',
+        'https://ru.wikipedia.org/wiki/Категория:Вирусные_инфекции',
+        'https://ru.wikipedia.org/wiki/Категория:Бактериальные_инфекции',
+        # Дополнительно
+        'https://ru.wikipedia.org/wiki/Категория:Радиология',
+        'https://ru.wikipedia.org/wiki/Категория:Микробиология',
+        'https://ru.wikipedia.org/wiki/Категория:Вирусология',
+        'https://ru.wikipedia.org/wiki/Категория:Биохимия',
+        'https://ru.wikipedia.org/wiki/Категория:Спортивная_медицина',
+        'https://ru.wikipedia.org/wiki/Категория:Реабилитология',
+        'https://ru.wikipedia.org/wiki/Категория:Физиотерапия',
+        'https://ru.wikipedia.org/wiki/Категория:Диетология',
     ]
     
     custom_settings = {
@@ -71,33 +154,37 @@ class WikipediaSpider(scrapy.Spider):
     def parse_article(self, response):
         """Парсинг статьи Wikipedia"""
         # Заголовок
-        title = response.css('#firstHeading::text').get()
+        title = response.css('#firstHeading::text, #firstHeading span::text').get()
         if not title:
             title = response.css('h1::text').get()
         
         if not title:
+            self.logger.debug(f"Нет заголовка: {response.url}")
             return
         
         title = title.strip()
         
-        # Текст статьи
-        text_parts = response.css(
-            '#mw-content-text .mw-parser-output > p::text, '
-            '#mw-content-text .mw-parser-output > p b::text, '
-            '#mw-content-text .mw-parser-output > p i::text, '
-            '#mw-content-text .mw-parser-output > p a::text'
-        ).getall()
+        # Текст статьи — берём ВСЕ параграфы из контента
+        paragraphs = response.css('#mw-content-text .mw-parser-output p')
+        text_parts = []
+        for p in paragraphs:
+            # Извлекаем весь текст из параграфа (включая вложенные элементы)
+            p_text = ''.join(p.css('*::text').getall())
+            if p_text.strip():
+                text_parts.append(p_text.strip())
         
-        text = ' '.join([p.strip() for p in text_parts if p.strip()])
+        text = ' '.join(text_parts)
         text = re.sub(r'\s+', ' ', text).strip()
         text = re.sub(r'\[\d+\]', '', text)  # Убираем [1], [2]
+        text = re.sub(r'\[править[^\]]*\]', '', text)  # Убираем [править | править код]
         
-        if len(text) < 200:
+        if len(text) < 150:
+            self.logger.debug(f"Короткий текст ({len(text)}): {title}")
             return
         
         # Категория (первая из списка)
         categories = response.css('#mw-normal-catlinks a::text').getall()
-        category = categories[0] if categories else None
+        category = categories[0] if categories else 'Wikipedia'
         
         item = MedicalArticle()
         item['source'] = 'wikipedia'

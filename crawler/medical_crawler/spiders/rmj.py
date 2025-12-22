@@ -73,36 +73,36 @@ class RMJSpider(scrapy.Spider):
         category = response.meta.get('category', '')
         self.logger.info(f"Парсинг категории '{category}': {response.url}")
         
-        # Ссылки на статьи (несколько вариантов селекторов)
-        for link in response.css(
-            'a.article-title::attr(href), '
-            'h3 a::attr(href), '
-            '.article-link::attr(href), '
-            '.article-preview a::attr(href), '
-            'a::attr(href)'
-        ).getall():
+        articles_found = 0
+        
+        # Ссылки на статьи
+        for link in response.css('a::attr(href)').getall():
             if not link:
                 continue
             
             full_url = response.urljoin(link)
             
-            # Статьи этой категории
+            # Статьи этой категории: /articles/{category}/{article_slug}/
             if f'/articles/{category}/' in full_url:
-                path = full_url.replace(f'https://www.rmj.ru/articles/{category}/', '').strip('/')
-                if path and '/' not in path and not path.startswith('?'):
+                # Извлекаем slug статьи
+                path = full_url.split(f'/articles/{category}/')[-1].strip('/')
+                
+                # Статья — это непустой slug без параметров и без вложенных путей
+                if path and '/' not in path and '?' not in path and path != category:
+                    articles_found += 1
                     yield response.follow(full_url, self.parse_article, meta={'category': category})
         
-        # Пагинация (несколько вариантов селекторов)
-        for page_link in response.css(
-            'a.next::attr(href), '
-            'a.pagination__link::attr(href), '
-            '.pagination a::attr(href), '
-            'a[rel="next"]::attr(href), '
-            '.pager__item--next a::attr(href), '
-            'a.pager-next::attr(href)'
-        ).getall():
-            if page_link:
+        self.logger.info(f"Найдено статей в '{category}': {articles_found}")
+        
+        # Пагинация — ищем ссылки с PAGEN или page
+        pagination_found = 0
+        for page_link in response.css('.pagination a::attr(href)').getall():
+            if page_link and ('PAGEN' in page_link or 'page' in page_link.lower()):
+                pagination_found += 1
                 yield response.follow(page_link, self.parse_category, meta={'category': category})
+        
+        if pagination_found:
+            self.logger.info(f"Найдено страниц пагинации в '{category}': {pagination_found}")
     
     def parse_article(self, response):
         """Парсинг статьи"""
@@ -184,5 +184,6 @@ class RMJSpider(scrapy.Spider):
         item['year'] = year
         item['crawled_at'] = datetime.now().isoformat()
         
+        self.logger.info(f"Сохранено: {title[:50]}...")
         yield item
 
