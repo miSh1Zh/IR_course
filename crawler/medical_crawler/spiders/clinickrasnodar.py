@@ -11,11 +11,10 @@ class ClinicKrasnodarSpider(scrapy.Spider):
     """
     
     name = 'clinickrasnodar'
-    allowed_domains = ['xn--80ahbdcbmjcgaeqocq5cyc.xn--p1ai', 'клиникакраснодар.рф']
+    allowed_domains = ['xn--80aaapramcbfxfnzfl.xn--p1ai', 'клиникакраснодар.рф']
     
     start_urls = [
-        'https://xn--80ahbdcbmjcgaeqocq5cyc.xn--p1ai/articles/',  # Punycode для клиникакраснодар.рф
-        'https://клиникакраснодар.рф/articles/',  # Кириллица (на случай редиректа)
+        'https://xn--80aaapramcbfxfnzfl.xn--p1ai/articles/',  # Правильный Punycode для клиникакраснодар.рф
     ]
     
     custom_settings = {
@@ -40,6 +39,7 @@ class ClinicKrasnodarSpider(scrapy.Spider):
         self.logger.info(f"Парсинг: {response.url}")
         
         # Ссылки на статьи
+        # Структура: /articles/stati-patsientam/{slug}/
         for link in response.css('a::attr(href)').getall():
             if not link:
                 continue
@@ -48,19 +48,29 @@ class ClinicKrasnodarSpider(scrapy.Spider):
             
             # Статьи в разделе /articles/
             if '/articles/' in full_url:
-                path_depth = full_url.rstrip('/').count('/')
-                # Статья имеет минимум 4 слэша: /articles/slug/
-                if path_depth >= 4:
+                # Извлекаем путь после /articles/
+                path_after = full_url.split('/articles/')[-1].strip('/')
+                parts = [p for p in path_after.split('/') if p]
+                
+                # Статья: /articles/category/slug/ (2+ части)
+                if len(parts) >= 2:
                     yield response.follow(full_url, self.parse_article)
+                # Категория: /articles/category/ (1 часть) — обходим дальше
+                elif len(parts) == 1:
+                    yield response.follow(full_url, self.parse)
         
-        # Пагинация (несколько вариантов селекторов)
+        # Пагинация (PAGEN_1=2 и т.д.)
+        next_page = response.css('link[rel="next"]::attr(href)').get()
+        if next_page:
+            yield response.follow(next_page, self.parse)
+        
+        # Другие варианты пагинации
         for page_link in response.css(
             'a.next::attr(href), '
-            '.pagination a.next::attr(href), '
             '.pagination a::attr(href), '
             'a[rel="next"]::attr(href)'
         ).getall():
-            if page_link:
+            if page_link and 'PAGEN' in page_link:
                 yield response.follow(page_link, self.parse)
     
     def parse_article(self, response):
