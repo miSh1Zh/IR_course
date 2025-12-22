@@ -2,32 +2,32 @@
 set -e
 
 # Конфигурация (время в минутах, перераспределено по продуктивности источников)
-PROBOLEZNY_TIME=20     # работает отлично
-JOURNALDOCTOR_TIME=20  # работает отлично
-RMJ_TIME=30            # КРИТИЧНО - самый крупный источник
-TAKZDOROVO_TIME=15     # после исправлений
-CLINICKRASNODAR_TIME=10 # после исправлений
-BIGENC_TIME=10         # ограниченный контент
-BNEWS_TIME=8           # ограниченный контент
-WIKIPEDIA_TIME=20      # Wikipedia - огромный источник медицинских статей
-PAUSE_BETWEEN=5        # минут пауза между сменой источника
-LONG_PAUSE=60          # минут пауза при блокировке всех источников
-MIN_ITEMS=3            # минимум документов за сессию
+PROBOLEZNY_TIME=20
+JOURNALDOCTOR_TIME=20
+RMJ_TIME=20  
+TAKZDOROVO_TIME=15
+CLINICKRASNODAR_TIME=10
+BIGENC_TIME=10
+BNEWS_TIME=8
+WIKIPEDIA_TIME=30
+PAUSE_BETWEEN=2
+LONG_PAUSE=60
+MIN_ITEMS=3
 
 # MongoDB connection (внутри Docker сети)
 MONGO_HOST="${MONGO_HOST:-mongodb}"
 MONGO_PORT="${MONGO_PORT:-27017}"
 MONGO_DB="${MONGO_DB:-medical_search}"
 
-echo "Стратегия (перераспределена по продуктивности):"
+echo "Стратегия:"
 echo "probolezny: ${PROBOLEZNY_TIME} мин"
 echo "journaldoctor: ${JOURNALDOCTOR_TIME} мин"
-echo "rmj: ${RMJ_TIME} мин (критически важный источник)"
+echo "rmj: ${RMJ_TIME} мин"
 echo "takzdorovo: ${TAKZDOROVO_TIME} мин"
 echo "clinickrasnodar: ${CLINICKRASNODAR_TIME} мин"
 echo "bigenc: ${BIGENC_TIME} мин"
 echo "bnews: ${BNEWS_TIME} мин"
-echo "wikipedia: ${WIKIPEDIA_TIME} мин (огромный источник)"
+echo "wikipedia: ${WIKIPEDIA_TIME} мин"
 echo "Пауза между источниками: ${PAUSE_BETWEEN} мин"
 echo "MongoDB: ${MONGO_HOST}:${MONGO_PORT}/${MONGO_DB}"
 echo ""
