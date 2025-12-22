@@ -1,52 +1,93 @@
 #!/usr/bin/env python3
-import struct
+"""
+Анализ закона Ципфа для корпуса документов.
+
+Закон Ципфа: f(r) = C / r^alpha
+- f(r) - частота слова с рангом r
+- r - ранг (1 = самое частое)
+- alpha ~ 1.0 для естественного языка
+- C - константа пропорциональности
+"""
 import matplotlib.pyplot as plt
 import numpy as np
+import re
 import os
 import sys
+from collections import Counter
 
 
-def read_index_terms(index_file):
-    terms = []
+def tokenize_simple(text):
+    """Простая токенизация для анализа Ципфа."""
+    if not text:
+        return []
+    text = text.lower()
+    tokens = re.findall(r'[а-яёa-z]+', text)
+    return [t for t in tokens if len(t) >= 2]
+
+
+def read_from_mongodb(mongo_uri):
+    """
+    Читает корпус из MongoDB и считает частоту слов (TF).
     
-    with open(index_file, 'rb') as f:
-        magic = struct.unpack('I', f.read(4))[0]
-        
-        if magic != 0x5849444D:
-            print(f"Ошибка: неверный формат файла (magic={hex(magic)})")
-            return []
-        
-        version = struct.unpack('I', f.read(4))[0]
-        num_terms = struct.unpack('I', f.read(4))[0]
-        num_docs = struct.unpack('I', f.read(4))[0]
-        forward_offset = struct.unpack('Q', f.read(8))[0]
-        reserved = struct.unpack('Q', f.read(8))[0]
-        
-        print(f"Версия индекса: {version}")
-        print(f"Документов: {num_docs}")
-        print(f"Термов: {num_terms}")
-        
-        for i in range(num_terms):
-            term_len = struct.unpack('I', f.read(4))[0]
-            term = f.read(term_len).decode('utf-8')
-            posting_len = struct.unpack('I', f.read(4))[0]
-            f.seek(posting_len * 4, 1)
-            
-            terms.append((term, posting_len))
-            
-            if (i + 1) % 10000 == 0:
-                print(f"\rПрочитано термов: {i + 1}/{num_terms}", end='', flush=True)
+    Args:
+        mongo_uri: URI подключения к MongoDB
     
-    print(f"\rПрочитано термов: {num_terms}/{num_terms}")
+    Returns:
+        список (term, frequency) по убыванию частоты
+    """
+    from pymongo import MongoClient
     
-    return terms
+    client = MongoClient(mongo_uri)
+    try:
+        db = client.get_default_database()
+    except:
+        db = client['medical_search']
+    collection = db['articles']
+    
+    doc_count = collection.count_documents({})
+    print(f"Документов в MongoDB: {doc_count}")
+    
+    word_counts = Counter()
+    processed = 0
+    
+    for doc in collection.find({}, {'text': 1, 'title': 1}):
+        text = (doc.get('text', '') or '') + ' ' + (doc.get('title', '') or '')
+        tokens = tokenize_simple(text)
+        word_counts.update(tokens)
+        processed += 1
+        
+        if processed % 1000 == 0:
+            print(f"\rОбработано: {processed}/{doc_count}", end='', flush=True)
+    
+    print(f"\rОбработано: {processed}/{doc_count}")
+    print(f"Уникальных слов: {len(word_counts)}")
+    print(f"Всего слов: {sum(word_counts.values())}")
+    
+    client.close()
+    return word_counts.most_common()
 
 
 def analyze_zipf(terms, output_dir='.'):
+    """
+    Анализ закона Ципфа.
+    
+    Параметры вычисляются методом линейной регрессии в логарифмическом пространстве:
+    log(f) = log(C) - alpha*log(r)
+    
+    Где:
+    - f - частота слова
+    - r - ранг слова
+    - alpha - показатель степени (~1.0 для естественного языка)
+    - C - константа
+    """
     sorted_terms = sorted(terms, key=lambda x: x[1], reverse=True)
     
-    ranks = list(range(1, len(sorted_terms) + 1))
-    frequencies = [t[1] for t in sorted_terms]
+    ranks = np.array(range(1, len(sorted_terms) + 1))
+    frequencies = np.array([t[1] for t in sorted_terms])
+    
+    mask = frequencies > 0
+    ranks = ranks[mask]
+    frequencies = frequencies[mask]
     
     log_ranks = np.log(ranks)
     log_freqs = np.log(frequencies)
@@ -55,97 +96,107 @@ def analyze_zipf(terms, output_dir='.'):
     alpha = -coeffs[0]
     C = np.exp(coeffs[1])
     
-    print(f"\nПараметры закона Ципфа:")
-    print(f"  α (показатель степени) = {alpha:.4f}")
-    print(f"  C (константа) = {C:.2f}")
-    print(f"  Теоретическое значение α ≈ 1.0")
+    predicted = coeffs[1] + coeffs[0] * log_ranks
+    ss_res = np.sum((log_freqs - predicted) ** 2)
+    ss_tot = np.sum((log_freqs - np.mean(log_freqs)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
     
+    # Теоретическая кривая
     theoretical = C / np.power(ranks, alpha)
     
-    plt.figure(figsize=(12, 5))
+    # График (один, как по заданию)
+    freq_label = 'Частота'
     
-    plt.subplot(1, 2, 1)
+    plt.figure(figsize=(10, 6))
     plt.loglog(ranks, frequencies, 'b.', markersize=1, alpha=0.5, label='Данные')
     plt.loglog(ranks, theoretical, 'r-', linewidth=2, 
-               label=f'Закон Ципфа (α={alpha:.2f})')
+               label=f'Закон Ципфа: f(r) = {C:.0f}/r^{alpha:.2f}')
     plt.xlabel('Ранг (log)')
-    plt.ylabel('Частота (log)')
-    plt.title('Закон Ципфа: log(rank) vs log(frequency)')
+    plt.ylabel(f'{freq_label} (log)')
+    plt.title(f'Закон Ципфа (alpha = {alpha:.2f})')
     plt.legend()
     plt.grid(True, alpha=0.3)
-    
-    plt.subplot(1, 2, 2)
-    top_n = min(50, len(sorted_terms))
-    top_terms = [t[0] for t in sorted_terms[:top_n]]
-    top_freqs = [t[1] for t in sorted_terms[:top_n]]
-    
-    y_pos = list(range(top_n))
-    plt.barh(y_pos, top_freqs, color='steelblue')
-    plt.yticks(y_pos, top_terms, fontsize=8)
-    plt.xlabel('Частота (количество документов)')
-    plt.title(f'Топ-{top_n} самых частых термов')
-    plt.gca().invert_yaxis()
-    
     plt.tight_layout()
     
     output_file = os.path.join(output_dir, 'zipf_law.png')
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
-    print(f"\nГрафик сохранен в {output_file}")
+    print(f"\nГрафик сохранен: {output_file}")
     
-    print(f"\nВсего уникальных термов: {len(terms)}")
+    # Статистика
+    print(f"Уникальных термов: {len(sorted_terms)}")
     print(f"Максимальная частота: {max(frequencies)}")
     print(f"Минимальная частота: {min(frequencies)}")
     print(f"Средняя частота: {np.mean(frequencies):.2f}")
     print(f"Медианная частота: {np.median(frequencies):.2f}")
     
     hapax = sum(1 for f in frequencies if f == 1)
-    print(f"Hapax legomena (частота=1): {hapax} ({100*hapax/len(terms):.1f}%)")
+    print(f"Hapax legomena (f=1): {hapax} ({100*hapax/len(sorted_terms):.1f}%)")
     
-    print("\nТоп-20 термов:")
+    print(f"\nТоп-20 термов:")
     for i, (term, freq) in enumerate(sorted_terms[:20]):
         print(f"  {i+1:2d}. {term:30s} {freq:6d}")
     
-    with open(os.path.join(output_dir, 'term_frequencies.txt'), 'w', encoding='utf-8') as f:
+    # Сохранение частот
+    freq_file = os.path.join(output_dir, 'term_frequencies.txt')
+    with open(freq_file, 'w', encoding='utf-8') as f:
         f.write("rank\tterm\tfrequency\n")
         for rank, (term, freq) in enumerate(sorted_terms, 1):
             f.write(f"{rank}\t{term}\t{freq}\n")
+    print(f"Частоты сохранены: {freq_file}")
     
-    print(f"Частоты сохранены в {output_dir}/term_frequencies.txt")
-    
-    return alpha, C
+    return alpha, C, r_squared
 
 
 def main():
-    if len(sys.argv) > 1:
-        index_file = sys.argv[1]
-    else:
-        index_file = '../data/index.bin'
+    """
+    Анализ закона Ципфа по корпусу из MongoDB.
     
-    if not os.path.exists(index_file):
-        print(f"Ошибка: файл индекса не найден: {index_file}")
-        print("Использование: python zipf_law.py [путь_к_index.bin]")
-        return
+    Переменные окружения:
+        MONGO_URI - URI подключения к MongoDB (по умолчанию mongodb://localhost:27017/medical_search)
+    """
+    mongo_uri = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/medical_search')
+    output_dir = '.'
     
-    print(f"Анализ закона Ципфа")
-    print(f"Файл индекса: {index_file}\n")
+    # Парсинг аргументов
+    for arg in sys.argv[1:]:
+        if arg.startswith('--mongo='):
+            mongo_uri = arg.split('=', 1)[1]
+        elif arg.startswith('--output='):
+            output_dir = arg.split('=', 1)[1]
+        elif arg in ['-h', '--help']:
+            print("Использование: python zipf_law.py [--mongo=URI] [--output=DIR]")
+            print("По умолчанию читает из MongoDB (MONGO_URI)")
+            return
     
-    terms = read_index_terms(index_file)
+    print("Анализ закона Ципфа")
+    print(f"MongoDB: {mongo_uri}")
     
+    terms = read_from_mongodb(mongo_uri)
     if not terms:
-        print("Ошибка: не удалось прочитать термы из индекса")
+        print("Ошибка: не удалось прочитать корпус из MongoDB")
         return
     
-    alpha, C = analyze_zipf(terms)
+    alpha, C, r2 = analyze_zipf(terms, output_dir)
+    
+
     
     print(f"\nВывод:")
-    if 0.8 <= alpha <= 1.2:
-        print(f"Распределение хорошо соответствует закону Ципфа (α={alpha:.2f} ≈ 1)")
-    elif 0.5 <= alpha <= 1.5:
-        print(f"Распределение частично соответствует закону Ципфа (α={alpha:.2f})")
-    else:
-        print(f"Распределение отклоняется от закона Ципфа (α={alpha:.2f})")
+    print(f"Закон Ципфа: f(r) = C / r^alpha")
+    print(f"  alpha = {alpha:.4f}")
+    print(f"  C = {C:.2f}")
+    print(f"  R^2 = {r2:.4f}")
     
-    plt.show()
+    if 0.8 <= alpha <= 1.2:
+        print(f"Распределение ХОРОШО соответствует закону Ципфа (alpha ~ 1.0)")
+    elif 0.5 <= alpha <= 1.5:
+        print(f"Распределение ЧАСТИЧНО соответствует закону Ципфа")
+    else:
+        print(f"Распределение ОТКЛОНЯЕТСЯ от закона Ципфа")
+    
+    try:
+        plt.show()
+    except:
+        pass
 
 
 if __name__ == "__main__":

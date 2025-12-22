@@ -68,17 +68,18 @@ stats: start
 		python:3.11-slim \
 		bash -c "pip install -q pymongo && cd /app && python corpus_stats.py"
 
-zipf:
-	@if [ ! -f data/index.bin ]; then \
-		echo "Ошибка: индекс не найден. Выполните 'make build-index'"; \
-		exit 1; \
-	fi
+zipf: start
 	@echo "Анализ закона Ципфа..."
-	@docker run --rm \
-		-v "$$(pwd):/workspace" \
-		-w /workspace/analysis \
+	@docker ps | grep -q ir_mongodb || (echo "MongoDB не запущен" && exit 1)
+	@NETWORK=$$(docker inspect ir_mongodb --format='{{range $$k,$$v := .NetworkSettings.Networks}}{{$$k}}{{end}}') && \
+	docker run --rm \
+		--network "$$NETWORK" \
+		-v "$$(pwd)/analysis:/app" \
+		-e MONGO_URI=mongodb://ir_mongodb:27017/medical_search \
 		python:3.11-slim \
-		bash -c "pip install -q matplotlib numpy && python zipf_law.py ../data/index.bin && echo '' && echo 'График сохранен: analysis/zipf_law.png'"
+		bash -c "pip install -q matplotlib numpy pymongo && cd /app && python zipf_law.py"
+	@echo ""
+	@echo "Результаты: analysis/zipf_law.png, analysis/term_frequencies.txt"
 
 test:
 	@echo "Запуск unit-тестов..."
