@@ -53,19 +53,9 @@ class WikipediaSpider(scrapy.Spider):
                 if page_link and 'pagefrom=' in page_link:
                     yield response.follow(page_link, self.parse)
         else:
-            # Это статья — извлекаем данные и идём дальше по ссылкам
+            # Это статья — только извлекаем данные, НЕ идём по ссылкам из статей
+            # (иначе уходим от медицинской тематики к шахматам и т.д.)
             yield from self.parse_article(response)
-            
-            # Все ссылки из контента статьи
-            for link in response.css('#mw-content-text a::attr(href)').getall():
-                if not link or not link.startswith('/wiki/'):
-                    continue
-                
-                # Пропускаем служебные
-                if ':' in link:
-                    continue
-                
-                yield response.follow(link, self.parse)
     
     def parse_article(self, response):
         """Парсинг статьи Wikipedia"""
