@@ -9,6 +9,7 @@ TAKZDOROVO_TIME=15     # после исправлений
 CLINICKRASNODAR_TIME=10 # после исправлений
 BIGENC_TIME=10         # ограниченный контент
 BNEWS_TIME=8           # ограниченный контент
+WIKIPEDIA_TIME=20      # Wikipedia - огромный источник медицинских статей
 PAUSE_BETWEEN=5        # минут пауза между сменой источника
 LONG_PAUSE=60          # минут пауза при блокировке всех источников
 MIN_ITEMS=3            # минимум документов за сессию
@@ -26,6 +27,7 @@ echo "takzdorovo: ${TAKZDOROVO_TIME} мин"
 echo "clinickrasnodar: ${CLINICKRASNODAR_TIME} мин"
 echo "bigenc: ${BIGENC_TIME} мин"
 echo "bnews: ${BNEWS_TIME} мин"
+echo "wikipedia: ${WIKIPEDIA_TIME} мин (огромный источник)"
 echo "Пауза между источниками: ${PAUSE_BETWEEN} мин"
 echo "MongoDB: ${MONGO_HOST}:${MONGO_PORT}/${MONGO_DB}"
 echo ""
@@ -199,8 +201,29 @@ while true; do
         blocked_count=$((blocked_count + 1))
     fi
     
+    echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
+    sleep ${PAUSE_BETWEEN}m
+    
+    # 8. wikipedia
+    echo ""
+    echo "[$(date +%H:%M:%S)] === wikipedia (${WIKIPEDIA_TIME} мин) ==="
+    items_before=$(count_docs "wikipedia")
+    echo "[$(date +%H:%M:%S)] Документов до: ${items_before}"
+    
+    timeout ${WIKIPEDIA_TIME}m scrapy crawl wikipedia -L INFO 2>&1 | tee -a /app/logs/rotation.log || true
+    
+    items_after=$(count_docs "wikipedia")
+    items_collected=$((items_after - items_before))
+    
+    echo "[$(date +%H:%M:%S)] Документов после: ${items_after}"
+    echo "[$(date +%H:%M:%S)] Собрано: ${items_collected}"
+    if [ "$items_collected" -lt "$MIN_ITEMS" ]; then
+        echo "[$(date +%H:%M:%S)] wikipedia может быть заблокирован (< ${MIN_ITEMS})"
+        blocked_count=$((blocked_count + 1))
+    fi
+    
     # Проверка: если все источники заблокированы
-    if [ "$blocked_count" -eq 7 ]; then
+    if [ "$blocked_count" -eq 8 ]; then
         echo ""
         echo "[$(date +%H:%M:%S)] ВСЕ ИСТОЧНИКИ ЗАБЛОКИРОВАНЫ ИЛИ НЕДОСТУПНЫ"
         echo "[$(date +%H:%M:%S)] Увеличенная пауза: ${LONG_PAUSE} мин..."
