@@ -1,6 +1,7 @@
 import scrapy
 from medical_crawler.items import MedicalArticle
 from datetime import datetime
+from urllib.parse import unquote
 import re
 
 
@@ -32,29 +33,39 @@ class WikipediaSpider(scrapy.Spider):
         """Парсинг страницы Wikipedia"""
         self.logger.info(f"Парсинг: {response.url}")
         
+        # Декодируем URL для проверки (кириллица в URL кодируется)
+        decoded_url = unquote(response.url)
+        
         # Пропускаем служебные страницы
-        if any(x in response.url for x in ['Служебная:', 'Обсуждение:', 'Участник:', 'Файл:', 'Шаблон:', 'Портал:', 'Справка:']):
+        skip_patterns = ['Служебная:', 'Обсуждение:', 'Участник:', 'Файл:', 'Шаблон:', 'Портал:', 'Справка:']
+        if any(x in decoded_url for x in skip_patterns):
             return
         
         # Если это страница категории — собираем ссылки
-        if '/wiki/Категория:' in response.url:
+        if 'Категория:' in decoded_url or '/wiki/Category:' in response.url:
+            self.logger.info(f"Обработка категории: {decoded_url}")
+            
             # Статьи в категории
             for link in response.css('#mw-pages a::attr(href)').getall():
                 if link and link.startswith('/wiki/') and ':' not in link:
+                    self.logger.debug(f"Найдена статья: {link}")
                     yield response.follow(link, self.parse)
             
             # Подкатегории
             for link in response.css('#mw-subcategories a::attr(href)').getall():
-                if link and '/wiki/Категория:' in link:
-                    yield response.follow(link, self.parse)
+                if link and '/wiki/' in link:
+                    decoded_link = unquote(link)
+                    if 'Категория:' in decoded_link or 'Category:' in link:
+                        self.logger.debug(f"Найдена подкатегория: {link}")
+                        yield response.follow(link, self.parse)
             
-            # Пагинация категории
-            for page_link in response.css('#mw-pages a::attr(href)').getall():
-                if page_link and 'pagefrom=' in page_link:
-                    yield response.follow(page_link, self.parse)
+            # Пагинация категории (следующая страница)
+            next_page = response.css('a:contains("следующая страница")::attr(href), a:contains("Следующая страница")::attr(href)').get()
+            if next_page:
+                self.logger.info(f"Пагинация: {next_page}")
+                yield response.follow(next_page, self.parse)
         else:
-            # Это статья — только извлекаем данные, НЕ идём по ссылкам из статей
-            # (иначе уходим от медицинской тематики к шахматам и т.д.)
+            # Это статья — извлекаем данные
             yield from self.parse_article(response)
     
     def parse_article(self, response):
