@@ -18,47 +18,67 @@ class RuwikiSpider(scrapy.Spider):
 
     custom_settings = {
         'CLOSESPIDER_ITEMCOUNT': 50000,
-        'DEPTH_LIMIT': 10,
-        'DOWNLOAD_DELAY': 2,
+        'DEPTH_LIMIT': 20,
+        'DOWNLOAD_DELAY': 1,
         'RANDOMIZE_DOWNLOAD_DELAY': True,
         'ROBOTSTXT_OBEY': False,
         'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'JOBDIR': 'logs/ruwiki_state',
+        'CONCURRENT_REQUESTS': 16,
+        'CONCURRENT_REQUESTS_PER_DOMAIN': 8,
     }
 
     def parse(self, response):
-        """Парсинг категории или списка статей"""
-        self.logger.info(f"Парсинг: {response.url}")
+        """Парсинг категории — обход подкатегорий и сбор статей"""
+        self.logger.info(f"Категория: {response.url}")
 
         decoded_url = unquote(response.url)
 
         # Пропускаем служебные страницы
-        skip_patterns = ['Служебная:', 'Обсуждение:', 'Участник:', 'Файл:', 'Шаблон:', 'Рувики:']
+        skip_patterns = ['Служебная:', 'Обсуждение:', 'Участник:', 'Файл:', 'Шаблон:']
         if any(x in decoded_url for x in skip_patterns):
             return
 
-        # Если это категория — собираем ссылки
-        if 'Категория:' in decoded_url:
-            self.logger.info(f"Обработка категории: {decoded_url}")
-
-            # Подкатегории (в div.mw-category)
-            for link in response.css('div.mw-category a::attr(href)').getall():
-                if link and '/wiki/Категория:' in link:
-                    yield response.follow(link, self.parse)
-
-            # Статьи (в div.mw-category, но без "Категория:")
-            for link in response.css('div.mw-category a::attr(href)').getall():
-                if link and '/wiki/' in link and 'Категория:' not in link:
-                    # Дополнительная проверка: не служебная ли
-                    if not any(x in link for x in ['Служебная', 'Обсуждение', 'Рувики:Избранные', 'Рувики:Хорошие', 'Рувики:Выверенные']):
-                        yield response.follow(link, self.parse_article)
-
-        else:
-            # Это статья
+        # Проверяем, что это категория
+        if 'Категория:' not in decoded_url:
+            # Это статья, а не категория
             yield from self.parse_article(response)
+            return
+
+        # Это категория — обходим все ссылки в div.mw-category
+        all_links = response.css('div.mw-category a::attr(href)').getall()
+
+        for link in all_links:
+            if not link:
+                continue
+
+            full_url = response.urljoin(link)
+
+            # Если это подкатегория — рекурсивный обход
+            if '/wiki/Категория:' in full_url:
+                # Пропускаем служебные категории
+                if any(skip in full_url for skip in ['Рувики:Избранные', 'Рувики:Хорошие', 'Рувики:Выверенные']):
+                    continue
+                
+                self.logger.info(f"Подкатегория: {full_url}")
+                yield response.follow(full_url, self.parse)
+
+            # Если это статья (не категория, не служебная) — парсим
+            elif '/wiki/' in full_url:
+                # Пропускаем служебные категории в самих ссылках
+                if not any(x in full_url for x in ['Служебная', 'Обсуждение', 'Рувики:', 'Файл:']):
+                    yield response.follow(full_url, self.parse_article)
 
     def parse_article(self, response):
         """Парсинг статьи"""
+        decoded_url = unquote(response.url)
+
+        # Если это опять категория (редирект или ошибка), обработаем как категорию
+        if 'Категория:' in decoded_url:
+            self.logger.debug(f"Переадресация на категорию: {decoded_url}")
+            yield from self.parse(response)
+            return
+
         # Заголовок
         title = response.css('h1.firstHeading::text').get()
         if not title:
@@ -69,7 +89,7 @@ class RuwikiSpider(scrapy.Spider):
 
         title = title.strip()
 
-        # Текст статьи
+        # Текст статьи (все параграфы)
         text_parts = response.css('div.mw-parser-output p::text').getall()
         text = ' '.join([t.strip() for t in text_parts if t.strip()])
         text = re.sub(r'\s+', ' ', text).strip()
@@ -78,7 +98,8 @@ class RuwikiSpider(scrapy.Spider):
         text = re.sub(r'\[\d+\]', '', text)
         text = re.sub(r'\[править[^\]]*\]', '', text)
 
-        if len(text) < 50:
+        if len(text) < 30:
+            self.logger.debug(f"Текст слишком короткий ({len(text)} символов): {title}")
             return
 
         # Категория (первая из списка)
@@ -96,4 +117,3 @@ class RuwikiSpider(scrapy.Spider):
 
         self.logger.info(f"Собрана статья: {title[:50]}...")
         yield item
-

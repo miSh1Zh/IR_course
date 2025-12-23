@@ -27,4 +27,4 @@ engine/tests/test_*
 !engine/tests/*.cpp
 !engine/tests/*.sh
 
-logs/*
+crawler/logs/*
