@@ -2,15 +2,16 @@
 set -e
 
 # Конфигурация (время в минутах, перераспределено по продуктивности источников)
-PROBOLEZNY_TIME=5
+RUWIKI_TIME=30
+PROBOLEZNY_TIME=3
 JOURNALDOCTOR_TIME=25
 RMJ_TIME=25
-TAKZDOROVO_TIME=5
-CLINICKRASNODAR_TIME=5
-BIGENC_TIME=5
-BNEWS_TIME=5
+TAKZDOROVO_TIME=3
+CLINICKRASNODAR_TIME=3
+BIGENC_TIME=3
+BNEWS_TIME=3
 WIKIPEDIA_TIME=30
-PAUSE_BETWEEN=2
+PAUSE_BETWEEN=1
 LONG_PAUSE=60
 MIN_ITEMS=3
 
@@ -20,6 +21,7 @@ MONGO_PORT="${MONGO_PORT:-27017}"
 MONGO_DB="${MONGO_DB:-medical_search}"
 
 echo "Стратегия:"
+echo "ruwiki: ${RUWIKI_TIME} мин"
 echo "probolezny: ${PROBOLEZNY_TIME} мин"
 echo "journaldoctor: ${JOURNALDOCTOR_TIME} мин"
 echo "rmj: ${RMJ_TIME} мин"
@@ -56,7 +58,28 @@ while true; do
     
     blocked_count=0
     
-    # 1. probolezny
+    # 1. ruwiki
+    echo ""
+    echo "[$(date +%H:%M:%S)] === ruwiki (${RUWIKI_TIME} мин) ==="
+    items_before=$(count_docs "ruwiki")
+    echo "[$(date +%H:%M:%S)] Документов до: ${items_before}"
+    
+    timeout ${RUWIKI_TIME}m scrapy crawl ruwiki -L INFO 2>&1 | tee -a /app/logs/rotation.log || true
+    
+    items_after=$(count_docs "ruwiki")
+    items_collected=$((items_after - items_before))
+    
+    echo "[$(date +%H:%M:%S)] Документов после: ${items_after}"
+    echo "[$(date +%H:%M:%S)] Собрано: ${items_collected}"
+    if [ "$items_collected" -lt "$MIN_ITEMS" ]; then
+        echo "[$(date +%H:%M:%S)] ruwiki может быть заблокирован (< ${MIN_ITEMS})"
+        blocked_count=$((blocked_count + 1))
+    fi
+    
+    echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
+    sleep ${PAUSE_BETWEEN}m
+    
+    # 2. probolezny
     echo ""
     echo "[$(date +%H:%M:%S)] === probolezny (${PROBOLEZNY_TIME} мин) ==="
     items_before=$(count_docs "probolezny")
@@ -77,7 +100,7 @@ while true; do
     echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
     sleep ${PAUSE_BETWEEN}m
 
-    # 2. journaldoctor
+    # 3. journaldoctor
     echo ""
     echo "[$(date +%H:%M:%S)] === journaldoctor (${JOURNALDOCTOR_TIME} мин) ==="
     items_before=$(count_docs "journaldoctor")
@@ -98,7 +121,7 @@ while true; do
     echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
     sleep ${PAUSE_BETWEEN}m
     
-    # 3. bnews
+    # 4. bnews
     echo ""
     echo "[$(date +%H:%M:%S)] === bnews (${BNEWS_TIME} мин) ==="
     items_before=$(count_docs "bnews")
@@ -119,7 +142,7 @@ while true; do
     echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
     sleep ${PAUSE_BETWEEN}m
     
-    # 4. rmj
+    # 5. rmj
     echo ""
     echo "[$(date +%H:%M:%S)] === rmj (${RMJ_TIME} мин) ==="
     items_before=$(count_docs "rmj")
@@ -140,7 +163,7 @@ while true; do
     echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
     sleep ${PAUSE_BETWEEN}m
     
-    # 5. takzdorovo
+    # 6. takzdorovo
     echo ""
     echo "[$(date +%H:%M:%S)] === takzdorovo (${TAKZDOROVO_TIME} мин) ==="
     items_before=$(count_docs "takzdorovo")
@@ -162,7 +185,7 @@ while true; do
     sleep ${PAUSE_BETWEEN}m
     
     
-    # 6. clinickrasnodar
+    # 7. clinickrasnodar
     echo ""
     echo "[$(date +%H:%M:%S)] === clinickrasnodar (${CLINICKRASNODAR_TIME} мин) ==="
     items_before=$(count_docs "clinickrasnodar")
@@ -183,7 +206,7 @@ while true; do
     echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
     sleep ${PAUSE_BETWEEN}m
     
-    # 7. bigenc
+    # 8. bigenc
     echo ""
     echo "[$(date +%H:%M:%S)] === bigenc (${BIGENC_TIME} мин) ==="
     items_before=$(count_docs "bigenc")
@@ -204,7 +227,7 @@ while true; do
     echo "[$(date +%H:%M:%S)] Пауза ${PAUSE_BETWEEN} мин..."
     sleep ${PAUSE_BETWEEN}m
     
-    # 8. wikipedia
+    # 9. wikipedia
     echo ""
     echo "[$(date +%H:%M:%S)] === wikipedia (${WIKIPEDIA_TIME} мин) ==="
     items_before=$(count_docs "wikipedia")
@@ -223,7 +246,7 @@ while true; do
     fi
     
     # Проверка: если все источники заблокированы
-    if [ "$blocked_count" -eq 8 ]; then
+    if [ "$blocked_count" -eq 9 ]; then
         echo ""
         echo "[$(date +%H:%M:%S)] ВСЕ ИСТОЧНИКИ ЗАБЛОКИРОВАНЫ ИЛИ НЕДОСТУПНЫ"
         echo "[$(date +%H:%M:%S)] Увеличенная пауза: ${LONG_PAUSE} мин..."
