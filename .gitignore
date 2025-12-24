@@ -3,7 +3,7 @@ __pycache__
 *.pyo
 *.log
 *.aux
-*.pdf
+*.out
 venv/
 .DS_Store
 .cursor/
@@ -12,7 +12,6 @@ ir_labs.md
 
 data/*.json
 data/*.bin
-analysis/*.png
 analysis/*.txt
 analysis/corpus_stats.json
 
@@ -22,6 +21,7 @@ corpus_*.json.gz
 # Бинарные файлы C++
 engine/indexer
 engine/searcher
+engine/test_runner
 engine/*.o
 engine/tests/test_*
 !engine/tests/*.cpp

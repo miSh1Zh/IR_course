@@ -4,10 +4,19 @@
 
 \begin{verbatim}
 ir/
-├── crawler/              # Scrapy краулер
+├── crawler/
 │   └── medical_crawler/
 │       └── spiders/
-├── engine/               # C++ поисковый движок
+│           ├── journaldoctor.py
+│           ├── rmj.py
+│           ├── wikipedia.py
+│           ├── probolezny.py
+│           ├── ruwiki.py
+│           ├── bigenc.py
+│           ├── bnews.py
+│           ├── takzdorovo.py
+│           └── clinickrasnodar.py
+├── engine/
 │   ├── src/
 │   │   ├── tokenizer.cpp/hpp
 │   │   ├── stemmer.cpp/hpp
@@ -18,8 +27,8 @@ ir/
 │   │   ├── main_indexer.cpp
 │   │   └── main_searcher.cpp
 │   └── tests/
-├── web/                  # Flask веб-интерфейс
-└── analysis/             # Скрипты анализа
+├── web/
+└── analysis/
 \end{verbatim}
 
 \subsection{Токенизатор}
@@ -60,7 +69,30 @@ class HashMap {
 };
 \end{lstlisting}
 
-\subsection{Парсер запросов}
+\subsection{Краулеры (Spider'ы)}
+
+Реализовано 9 spider'ов для различных источников данных:
+
+\begin{itemize}
+    \item \textbf{journaldoctor.py} --- рекурсивный обход журнала journaldoctor.ru
+    \item \textbf{rmj.py} --- динамическое обнаружение категорий на rmj.ru, обход с пагинацией
+    \item \textbf{wikipedia.py} --- обход медицинских категорий Википедии
+    \item \textbf{probolezny.py} --- навигация по категориям заболеваний на probolezny.ru
+    \item \textbf{ruwiki.py} --- рекурсивный обход медицинской категории РУВИКИ
+    \item \textbf{bigenc.py} --- обход категорий Большой Российской Энциклопедии
+    \item \textbf{bnews.py} --- парсинг разделов журнала b-news.media
+    \item \textbf{takzdorovo.py} --- сбор статей из раздела /stati/ портала takzdorovo.ru
+    \item \textbf{clinickrasnodar.py} --- парсинг статей с обработкой Punycode URL (клиникакраснодар.рф)
+\end{itemize}
+
+Все spider'ы используют:
+\begin{itemize}
+    \item ROBOTSTXT\_OBEY: False (для эффективной сборки)
+    \item JOBDIR для сохранения состояния (предотвращение повторного обхода)
+    \item Уникальный индекс в MongoDB на поле URL (дедупликация)
+\end{itemize}
+
+\subsection{Парсер запросов
 
 Рекурсивный спуск для разбора булевых выражений:
 
