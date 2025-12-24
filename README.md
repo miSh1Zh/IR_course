@@ -62,6 +62,9 @@ make export                        # Экспорт корпуса
 make import FILE=corpus.json.gz    # Импорт корпуса
 ```
 
+Корпус из 30137 документов можно найти по [ссылке](https://drive.google.com/file/d/18wUGC9AU5tMld5kNqrdn6AxKwHTttNBu/view?usp=drive_link)
+
+
 ## Поиск через CLI
 
 ```bash
@@ -113,9 +116,4 @@ make stats                   # Полная статистика
 make zipf                    # Анализ закона Ципфа
 ```
 
-## Результаты
-
-- `data/corpus.json` — экспортированный корпус (NDJSON)
-- `data/index.bin` — бинарный индекс
-- `analysis/zipf_law.png` — график закона Ципфа
-- `analysis/corpus_stats.json` — статистика
+Готовую статистику по собранному корпусу можно найти по [ссылке](https://drive.google.com/drive/folders/1ldakc9nADI2tKb16UnSspYPMyxfGcEvA?usp=drive_link)
