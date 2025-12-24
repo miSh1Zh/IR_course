@@ -132,17 +132,17 @@ def analyze_zipf(terms, output_dir='.'):
     hapax = sum(1 for f in frequencies if f == 1)
     print(f"Hapax legomena (f=1): {hapax} ({100*hapax/len(sorted_terms):.1f}%)")
     
-    print(f"\nТоп-20 термов:")
-    for i, (term, freq) in enumerate(sorted_terms[:20]):
+    print(f"\nТоп-30 термов:")
+    for i, (term, freq) in enumerate(sorted_terms[:30]):
         print(f"  {i+1:2d}. {term:30s} {freq:6d}")
     
-    # Сохранение частот
+    # Сохранение топ-30 частот
     freq_file = os.path.join(output_dir, 'term_frequencies.txt')
     with open(freq_file, 'w', encoding='utf-8') as f:
         f.write("rank\tterm\tfrequency\n")
-        for rank, (term, freq) in enumerate(sorted_terms, 1):
+        for rank, (term, freq) in enumerate(sorted_terms[:30], 1):
             f.write(f"{rank}\t{term}\t{freq}\n")
-    print(f"Частоты сохранены: {freq_file}")
+    print(f"Топ-30 частот сохранены: {freq_file}")
     
     return alpha, C, r_squared
 
