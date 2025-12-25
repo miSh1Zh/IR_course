@@ -1,4 +1,4 @@
-filename=report
+filename=M8O-406Б-22_Жаднов_Михаил_Денисович
 
 pdf:
 	pdflatex ${filename}.tex
